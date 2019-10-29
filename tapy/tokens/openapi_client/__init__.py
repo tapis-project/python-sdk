@@ -18,21 +18,21 @@ from __future__ import absolute_import
 __version__ = "1.0.0"
 
 # import apis into sdk package
-from openapi_client.api.tokens_api import TokensApi
+from tokens.openapi_client.api.tokens_api import TokensApi
 
 # import ApiClient
-from openapi_client.api_client import ApiClient
-from openapi_client.configuration import Configuration
-from openapi_client.exceptions import OpenApiException
-from openapi_client.exceptions import ApiTypeError
-from openapi_client.exceptions import ApiValueError
-from openapi_client.exceptions import ApiKeyError
-from openapi_client.exceptions import ApiException
+from tokens.openapi_client.api_client import ApiClient
+from tokens.openapi_client.configuration import Configuration
+from tokens.openapi_client.exceptions import OpenApiException
+from tokens.openapi_client.exceptions import ApiTypeError
+from tokens.openapi_client.exceptions import ApiValueError
+from tokens.openapi_client.exceptions import ApiKeyError
+from tokens.openapi_client.exceptions import ApiException
 # import models into sdk package
-from openapi_client.models.basic_response import BasicResponse
-from openapi_client.models.inline_object import InlineObject
-from openapi_client.models.inline_object1 import InlineObject1
-from openapi_client.models.new_token_request import NewTokenRequest
-from openapi_client.models.new_token_response import NewTokenResponse
-from openapi_client.models.refresh_token_request import RefreshTokenRequest
+from tokens.openapi_client.models.basic_response import BasicResponse
+from tokens.openapi_client.models.inline_object import InlineObject
+from tokens.openapi_client.models.inline_object1 import InlineObject1
+from tokens.openapi_client.models.new_token_request import NewTokenRequest
+from tokens.openapi_client.models.new_token_response import NewTokenResponse
+from tokens.openapi_client.models.refresh_token_request import RefreshTokenRequest
 

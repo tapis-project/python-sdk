@@ -18,29 +18,29 @@ from __future__ import absolute_import
 __version__ = "1.0.0"
 
 # import apis into sdk package
-from openapi_client.api.ldaps_api import LdapsApi
-from openapi_client.api.owners_api import OwnersApi
-from openapi_client.api.tenants_api import TenantsApi
+from tenants.openapi_client.api.ldaps_api import LdapsApi
+from tenants.openapi_client.api.owners_api import OwnersApi
+from tenants.openapi_client.api.tenants_api import TenantsApi
 
 # import ApiClient
-from openapi_client.api_client import ApiClient
-from openapi_client.configuration import Configuration
-from openapi_client.exceptions import OpenApiException
-from openapi_client.exceptions import ApiTypeError
-from openapi_client.exceptions import ApiValueError
-from openapi_client.exceptions import ApiKeyError
-from openapi_client.exceptions import ApiException
+from tenants.openapi_client.api_client import ApiClient
+from tenants.openapi_client.configuration import Configuration
+from tenants.openapi_client.exceptions import OpenApiException
+from tenants.openapi_client.exceptions import ApiTypeError
+from tenants.openapi_client.exceptions import ApiValueError
+from tenants.openapi_client.exceptions import ApiKeyError
+from tenants.openapi_client.exceptions import ApiException
 # import models into sdk package
-from openapi_client.models.array_of_lda_ps import ArrayOfLDAPs
-from openapi_client.models.array_of_owners import ArrayOfOwners
-from openapi_client.models.array_of_tenants import ArrayOfTenants
-from openapi_client.models.basic_response import BasicResponse
-from openapi_client.models.inline_object import InlineObject
-from openapi_client.models.inline_object1 import InlineObject1
-from openapi_client.models.inline_object2 import InlineObject2
-from openapi_client.models.ldap import LDAP
-from openapi_client.models.new_ldap import NewLDAP
-from openapi_client.models.new_tenant import NewTenant
-from openapi_client.models.owner import Owner
-from openapi_client.models.tenant import Tenant
+from tenants.openapi_client.models.array_of_lda_ps import ArrayOfLDAPs
+from tenants.openapi_client.models.array_of_owners import ArrayOfOwners
+from tenants.openapi_client.models.array_of_tenants import ArrayOfTenants
+from tenants.openapi_client.models.basic_response import BasicResponse
+from tenants.openapi_client.models.inline_object import InlineObject
+from tenants.openapi_client.models.inline_object1 import InlineObject1
+from tenants.openapi_client.models.inline_object2 import InlineObject2
+from tenants.openapi_client.models.ldap import LDAP
+from tenants.openapi_client.models.new_ldap import NewLDAP
+from tenants.openapi_client.models.new_tenant import NewTenant
+from tenants.openapi_client.models.owner import Owner
+from tenants.openapi_client.models.tenant import Tenant
 

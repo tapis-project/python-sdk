@@ -15,15 +15,15 @@
 from __future__ import absolute_import
 
 # import models into model package
-from openapi_client.models.array_of_lda_ps import ArrayOfLDAPs
-from openapi_client.models.array_of_owners import ArrayOfOwners
-from openapi_client.models.array_of_tenants import ArrayOfTenants
-from openapi_client.models.basic_response import BasicResponse
-from openapi_client.models.inline_object import InlineObject
-from openapi_client.models.inline_object1 import InlineObject1
-from openapi_client.models.inline_object2 import InlineObject2
-from openapi_client.models.ldap import LDAP
-from openapi_client.models.new_ldap import NewLDAP
-from openapi_client.models.new_tenant import NewTenant
-from openapi_client.models.owner import Owner
-from openapi_client.models.tenant import Tenant
+from tenants.openapi_client.models.array_of_lda_ps import ArrayOfLDAPs
+from tenants.openapi_client.models.array_of_owners import ArrayOfOwners
+from tenants.openapi_client.models.array_of_tenants import ArrayOfTenants
+from tenants.openapi_client.models.basic_response import BasicResponse
+from tenants.openapi_client.models.inline_object import InlineObject
+from tenants.openapi_client.models.inline_object1 import InlineObject1
+from tenants.openapi_client.models.inline_object2 import InlineObject2
+from tenants.openapi_client.models.ldap import LDAP
+from tenants.openapi_client.models.new_ldap import NewLDAP
+from tenants.openapi_client.models.new_tenant import NewTenant
+from tenants.openapi_client.models.owner import Owner
+from tenants.openapi_client.models.tenant import Tenant

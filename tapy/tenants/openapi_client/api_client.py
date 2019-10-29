@@ -23,10 +23,10 @@ import tempfile
 import six
 from six.moves.urllib.parse import quote
 
-from openapi_client.configuration import Configuration
-import openapi_client.models
-from openapi_client import rest
-from openapi_client.exceptions import ApiValueError
+from tenants.openapi_client.configuration import Configuration
+import tenants.openapi_client.models
+from tenants.openapi_client import rest
+from tenants.openapi_client.exceptions import ApiValueError
 
 
 class ApiClient(object):
