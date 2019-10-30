@@ -13,6 +13,11 @@ pip install tapylib
 
 TODO - provide working examples, e.g., 
 ```
+import tapy
+t = tapy.Tapis(base_url='http://localhost:5001')
+req = t.tokens.NewTokenRequest(token_type='service', token_tenant_id='dev', token_username='admin')
+t.tokens.create_token(req)
+
 import openapi_client
 configuration = openapi_client.Configuration()
 configuration.host = 'http://localhost:5001'
