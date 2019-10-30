@@ -52,4 +52,9 @@ class Tapis(object):
         :return:
         """
         config = tenants_client.Configuration()
-        self.tenants = tenants_client.TenantsApi()
+        config.host = self.base_url
+        self.tenants = tenants_client.TenantsApi(config)
+
+        config = tokens_client.Configuration()
+        config.host = self.base_url
+        self.tokens = tokens_client.TokensApi(config)
