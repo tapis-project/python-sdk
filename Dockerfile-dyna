@@ -1,0 +1,14 @@
+# Image: tapis/dyntapy
+# Build: docker build -t tapis/dynatapy -f Dockerfile-dyna .
+# Try it: docker run -it --rm tapis/dynatapy bash
+
+from tapis/tenants-api:dev
+
+USER root
+ADD tapy/dyna/requirements.txt /home/tapis/requirements.txt
+RUN pip install -r /home/tapis/requirements.txt
+
+ADD tapy /home/tapis/tapy
+
+RUN chown -R tapis:tapis /home/tapis
+USER tapis
