@@ -16,17 +16,28 @@ class DynaTapy(object):
                  x_tenant_id=None,
                  x_username=None
                  ):
+        # the base_url for the server this Tapis client should interact with
         self.base_url = base_url
+
+        # use the following two parameters to set headers to make requests on behalf of a different
+        # tenant_id and username.
         self.x_tenant_id = x_tenant_id
         self.x_username = x_username
+
+        # the requests.Session object this client will use to prepare requests
         self.requests_session = requests.Session()
+
+        # create resources for each API defined above. In the future we could make this more dynamic in multiple ways.
         for resource_name in DynaTapy.RESOURCES:
             try:
+                # for now, hardcode the paths; we could look these up based on a canonical URL once that is
+                # established.
                 spec_path = f'/home/tapis/tapy/dyna/resources/openapi_v3-{resource_name}.yml'
                 spec_dict = yaml.load(open(spec_path, 'r'))
                 spec = create_spec(spec_dict)
             except Exception as e:
                 print("Got exception trying to load spec_path: {spec_path}")
+            # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
             setattr(self, resource_name, Resource(resource_name, spec.paths, self))
 
 
