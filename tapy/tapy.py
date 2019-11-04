@@ -1,5 +1,6 @@
 from tenants import openapi_client as tenants_client
-from tokens import openapi_client as tokens_client
+#from tokens import openapi_client as tokens_client
+from tokens.tokens import TokensFactory
 
 import errors
 
@@ -57,4 +58,5 @@ class Tapis(object):
 
         config = tokens_client.Configuration()
         config.host = self.base_url
-        self.tokens = tokens_client.TokensApi(config)
+        # self.tokens = tokens_client.TokensApi(config)
+        self.tokens = TokensFactory(config)

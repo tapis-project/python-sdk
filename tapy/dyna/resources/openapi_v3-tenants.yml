@@ -92,6 +92,11 @@ paths:
         required: true
         schema:
           type: string
+      - name: limit
+        in: query
+        description: limit the number of records returned.
+        schema:
+          type: integer
       responses:
         '200':
           description: OK

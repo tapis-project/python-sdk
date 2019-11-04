@@ -1,5 +1,6 @@
 import requests
 from openapi_core import create_spec
+from openapi_core.schema.parameters.enums import ParameterLocation
 import yaml
 
 import tapy.errors
@@ -9,20 +10,28 @@ class DynaTapy(object):
     """
     A dynamic client for the Tapis API.
     """
-    RESOURCES = ['tenants', 'tokens']
+    RESOURCES = ['actors', 'tenants', 'tokens']
 
     def __init__(self,
                  base_url=None,
+                 token=None,
                  x_tenant_id=None,
-                 x_username=None
+                 x_username=None,
+                 verify=True
                  ):
         # the base_url for the server this Tapis client should interact with
         self.base_url = base_url
+
+        # the JWT to use
+        self.token = token
 
         # use the following two parameters to set headers to make requests on behalf of a different
         # tenant_id and username.
         self.x_tenant_id = x_tenant_id
         self.x_username = x_username
+
+        # whether to verify the TLS certificate at the base_url
+        self.verify = verify
 
         # the requests.Session object this client will use to prepare requests
         self.requests_session = requests.Session()
@@ -39,6 +48,14 @@ class DynaTapy(object):
                 print("Got exception trying to load spec_path: {spec_path}")
             # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
             setattr(self, resource_name, Resource(resource_name, spec.paths, self))
+
+    def set_token(self, token):
+        """
+        Set the token to be used in this session.
+        :param token: (str) A valid Tapis JWT.
+        :return:
+        """
+        self.token = token
 
 
 class Resource(object):
@@ -96,7 +113,9 @@ class Operation(object):
         # derived attributes - for convenience
         self.operation_id = op_desc.operation_id
         self.http_method = op_desc.http_method
-        self.path_parameters = op_desc.parameters
+        self.url = f'{self.tapis_client.base_url}/{self.op_desc.path_name}'
+        self.path_parameters = [p for _, p in op_desc.parameters.items() if p.location == ParameterLocation.PATH]
+        self.query_parameters = [p for _, p in op_desc.parameters.items() if p.location == ParameterLocation.QUERY]
         self.request_body = op_desc.request_body
 
     def __call__(self, **kwargs):
@@ -112,18 +131,36 @@ class Operation(object):
         # the http method is defined by the operation -
         http_method = self.http_method.upper()
 
-        # contruct the http path -
-        base_url = self.tapis_client.base_url
-        # todo - add path parameters
-        url = f'{base_url}/{self.resource_name}'
+        # construct the http path -
+        url = self.url
+        for param in self.path_parameters:
+            # look for the name in the kwargs
+            if param.required:
+                if param.name not in kwargs:
+                    raise tapy.errors.InvalidInputError(f"{param.name} is a required argument.")
+            p_val = kwargs.pop(param.name)
+            if param.required and not p_val:
+                raise tapy.errors.InvalidInputError(f"{param.name} is a required argument and cannot be None.")
+            # replace the parameter in the path template with the parameter value
+            s = '{' + f'{param.name}' + '}'
+            url = url.replace(s, p_val)
 
-        # contruct the data -
-        # todo --
-        data = None
+        # construct the http query parameters -
+        params = {}
+        for param in self.query_parameters:
+            # look for the name in the kwargs
+            if param.required:
+                if param.name not in kwargs:
+                    raise tapy.errors.InvalidInputError(f"{param.name} is a required argument.")
+            p_val = kwargs.pop(param.name)
+            params[param.name] = p_val
 
         # construct the http headers -
-        # allow arbitrary headers to be passed into the
-        headers = {'X-Tapis-Token': self.tapis_client.token, }
+        headers = {}
+
+        # set the X-Tapis-Token header using the client
+        if hasattr(self.tapis_client, 'token') and self.tapis_client.token:
+            headers = {'X-Tapis-Token': self.tapis_client.token, }
 
         # the X-Tapis-Tenant and X-Tapis-Username headers can be set when the token represents a service account and the
         # service is making a request on behalf of another user/tenant.
@@ -132,13 +169,26 @@ class Operation(object):
         if self.tapis_client.x_username:
             headers['X-Tapis-Username'] = self.tapis_client.x_username
 
+        # allow arbitrary headers to be passed in via the special "headers" kwarg -
         try:
             headers.update(kwargs.pop('headers', {}))
         except ValueError:
             raise tapy.errors.InvalidInputError("The headers argument, if passed, must be a dictionary-like object.")
 
+        # construct the data -
+        # todo --
+        data = None
+        # these are the list of allowable content types; ex., 'application/json'.
+        content_types = self.op_desc.request_body.content.keys()
+        # if 'application/json' in content_types:
+
         # create a prepared request -
-        r = requests.Request(http_method, url, data=data, headers=headers).prepare()
+        r = requests.Request(http_method,
+                             url,
+                             params=params,
+                             data=data,
+                             headers=headers,
+                             verify=self.tapis_client.verify).prepare()
 
         # return the response object -
         try:
