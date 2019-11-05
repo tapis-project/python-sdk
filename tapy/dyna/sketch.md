@@ -30,7 +30,7 @@ first_tenant.create_time
 Out[*]: 'Mon, 04 Nov 2019 20:09:18 GMT'
 ```
 
-The libaray handles validation or required parameters:
+The library handles validation or required parameters:
 
 ```
 # the getTenant method requires tenant_id:
@@ -82,3 +82,25 @@ err.response.content
 Out[*]: b'{"message":"No Tapis access token found in the request.","result":null,"status":"error","version":"dev"}\n'
 
 ```
+
+Get a token, set the token, create a tenant:
+
+```
+# Get a new token:
+tokens = t.tokens.create_token(token_type='service', token_tenant_id='dev', token_username='admin')
+Out[*]: <tapy.dyna.dynatapy.TapisResult at 0x7f699f7ae4e0>
+
+# In general, the result will have both the access and refresh tokens 
+tokens.access_token
+
+tenant = {'tenant_id': 'dev',
+ 'base_url': 'https://dev.develop.tapis.io',
+ 'description': 'The dev tenant in the develop instance.',
+ 'token_service': 'https://dev.develop.tapis.io/tokens',
+ 'security_kernel': 'https://dev.develop.tapis.io/security',
+ 'is_owned_by_associate_site': True,
+ 'owner': 'jstubbs@tacc.utexas.edu',
+ 'authenticator': 'https://dev.develop.tapis.io/oauth1',
+ }
+ 
+ ```

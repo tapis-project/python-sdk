@@ -1,0 +1,57 @@
+# docker-compose -p tenants-api up -d
+---
+
+version: "3.5"
+
+networks:
+    tenants:
+        driver: bridge
+    tokens:
+        driver: bridge
+
+volumes:
+    pgdata:
+
+services:
+    postgres:
+        image: postgres:9.4
+        volumes:
+            - pgdata:/var/lib/postgresql/data
+        networks:
+            - tenants
+
+    nginx:
+        image: nginx
+        ports:
+            - "8000:80"
+        volumes:
+            - ./nginx.conf:/etc/nginx/nginx.conf
+        depends_on:
+            - tenants
+        networks:
+            - tenants
+            - tokens
+        restart: always
+
+    tenants:
+        image: tapis/tenants-api:latest
+        ports:
+            - "5000:5000"
+        volumes:
+            - ./config-local-tenants.json:/home/tapis/config.json
+            - ./service.log:/home/tapis/service.log
+        networks:
+            - tenants
+        depends_on:
+            - postgres
+
+    tokens:
+        image: tapis/tokens-api
+        ports:
+            - "5001:5000"
+        volumes:
+            - ./config-local-tokens.json:/home/tapis/config.json
+            - ./service.log:/home/tapis/service.log
+        networks:
+            - tokens
+

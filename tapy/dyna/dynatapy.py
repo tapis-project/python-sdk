@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import json
 import requests
 from openapi_core import create_spec
 from openapi_core.schema.parameters.enums import ParameterLocation
@@ -20,13 +21,15 @@ class DynaTapy(object):
     A dynamic client for the Tapis API.
     """
     RESOURCES = ['actors',
-                 #'files',
+                 #'files', ## currently the files spec is missing operationId's for some of its operations.
                  'tenants',
                  'tokens',]
 
     def __init__(self,
                  base_url=None,
-                 token=None,
+                 access_token=None,
+                 refresh_token=None,
+                 jwt=None,
                  x_tenant_id=None,
                  x_username=None,
                  verify=True
@@ -34,8 +37,14 @@ class DynaTapy(object):
         # the base_url for the server this Tapis client should interact with
         self.base_url = base_url
 
-        # the JWT to use
-        self.token = token
+        # the access token to use -- should be an honest TapisResult access token.
+        self.access_token = access_token
+
+        # the refresh token to use -- should be an honest TapisResult refresh token.
+        self.refresh_token = refresh_token
+
+        # pass in a "raw" JWT directly. This is only used if the access_token is not set.
+        self.jwt = jwt
 
         # use the following two parameters to set headers to make requests on behalf of a different
         # tenant_id and username.
@@ -61,13 +70,40 @@ class DynaTapy(object):
             # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
             setattr(self, resource_name, Resource(resource_name, spec.paths, self))
 
-    def set_token(self, token):
+    def set_access_token(self, token):
         """
-        Set the token to be used in this session.
-        :param token: (str) A valid Tapis JWT.
+        Set the access token to be used in this session.
+        :param token: (TapisResult) A TapisResult object returned using the t.tokens.create_token() method.
         :return:
         """
-        self.token = token
+        self.access_token = token
+
+    def set_refresh_token(self, token):
+        """
+        Set the refresh token to be used in this session.
+        :param token: (TapisResult) A TapisResult object returned using the t.tokens.create_token() method.
+        :return:
+        """
+        self.refresh_token = token
+
+    def set_jwt(self, jwt):
+        """
+        Set a
+        :param jwt: (str) Set the JWT to be used in this session.
+        :return:
+        """
+        self.jwt = jwt
+
+    def get_access_jwt(self):
+        """
+        Returns the JWT string to use for requests.
+        :return:
+        """
+        if hasattr(self, 'access_token') and hasattr(self.access_token, 'access_token'):
+            return self.access_token.access_token
+        if hasattr(self, 'jwt'):
+            return self.jwt
+        return None
 
 
 class Resource(object):
@@ -152,10 +188,10 @@ class Operation(object):
             # look for the name in the kwargs
             if param.required:
                 if param.name not in kwargs:
-                    raise tapy.errors.InvalidInputError(f"{param.name} is a required argument.")
+                    raise tapy.errors.InvalidInputError(msg=f"{param.name} is a required argument.")
             p_val = kwargs.pop(param.name)
             if param.required and not p_val:
-                raise tapy.errors.InvalidInputError(f"{param.name} is a required argument and cannot be None.")
+                raise tapy.errors.InvalidInputError(msg=f"{param.name} is a required argument and cannot be None.")
             # replace the parameter in the path template with the parameter value
             s = '{' + f'{param.name}' + '}'
             url = url.replace(s, p_val)
@@ -166,7 +202,7 @@ class Operation(object):
             # look for the name in the kwargs
             if param.required:
                 if param.name not in kwargs:
-                    raise tapy.errors.InvalidInputError(f"{param.name} is a required argument.")
+                    raise tapy.errors.InvalidInputError(msg=f"{param.name} is a required argument.")
             # only set the parameter if it was actually sent in the function -
             if param.name in kwargs:
                 p_val = kwargs.pop(param.name, None)
@@ -176,8 +212,8 @@ class Operation(object):
         headers = {}
 
         # set the X-Tapis-Token header using the client
-        if hasattr(self.tapis_client, 'token') and self.tapis_client.token:
-            headers = {'X-Tapis-Token': self.tapis_client.token, }
+        if self.tapis_client.get_access_jwt():
+            headers = {'X-Tapis-Token': self.tapis_client.get_access_jwt(), }
 
         # the X-Tapis-Tenant and X-Tapis-Username headers can be set when the token represents a service account and the
         # service is making a request on behalf of another user/tenant.
@@ -190,19 +226,23 @@ class Operation(object):
         try:
             headers.update(kwargs.pop('headers', {}))
         except ValueError:
-            raise tapy.errors.InvalidInputError("The headers argument, if passed, must be a dictionary-like object.")
+            raise tapy.errors.InvalidInputError(msg="The headers argument, if passed, must be a dictionary-like object.")
 
         # construct the data -
         data = None
         # these are the list of allowable request bofy content types; ex., 'application/json'.
         if hasattr(self.op_desc.request_body, 'content') and hasattr(self.op_desc.request_body.content, 'keys'):
-            content_types = self.op_desc.request_body.content.keys()
-            if 'application/json' in content_types:
+            if 'application/json' in self.op_desc.request_body.content.keys():
                 headers['Content-Type'] = 'application/json'
+                required_fields = self.op_desc.request_body.content['application/json'].schema.required
                 data = {}
                 for p_name, p_desc in self.op_desc.request_body.content['application/json'].schema.properties.items():
                     if p_name in kwargs:
                         data[p_name] = kwargs[p_name]
+                    elif p_name in required_fields:
+                        raise tapy.errors.InvalidInputError(msg=f'{p_name} is a required argument.')
+                # serialize data before passing it to the request
+                data = json.dumps(data)
 
         # create a prepared request -
         # cf., https://requests.kennethreitz.org/en/master/user/advanced/#request-and-response-objects
@@ -219,17 +259,16 @@ class Operation(object):
             # todo - handle different types of requests exceptions
             msg = f"Unable to make request to Tapis server. Exception: {e}"
             raise tapy.errors.BaseTapyException(msg=msg, request=r)
+        # try to get the error message and version from the Tapis request:
+        try:
+            error_msg = resp.json().get('message')
+        except:
+            error_msg = resp.content
+        try:
+            version = resp.json().get('version')
+        except:
+            version = None
         # for any kind of non-20x response, we need to raise an error.
-        if resp.status_code > 399:
-            # try to get the error message and version from the Tapis request:
-            try:
-                error_msg = resp.json().get('message')
-            except:
-                error_msg = resp.content
-            try:
-                version = resp.json().get('version')
-            except:
-                version = None
         if resp.status_code in (400, 404):
             raise tapy.errors.InvalidInputError(msg=error_msg, version=version, request=r, response=resp)
         if resp.status_code in (401, 403):
@@ -252,7 +291,11 @@ class Operation(object):
             if _seq_but_not_str(result):
                 return [TapisResult(**x) for x in result]
             # otherwise, assume it is a JSON object and return that directly as a result -
-            return TapisResult(**result)
+            try:
+                return TapisResult(**result)
+            except Exception as e:
+                msg = f'Failed to serialize the result object. Got exception: {e}'
+                raise tapy.errors.InvalidServerResponseError(msg=msg, version=version, request=r, response=resp)
 
         # todo - note:
         # For now, we do not try to handle other content-types, such as application/xml, etc. We just return
@@ -276,7 +319,7 @@ class TapisResult(object):
                 setattr(self, k, [item for item in v])
             # for complex types, we
             else:
-                setattr(self, k, TapisResult(v))
+                setattr(self, k, TapisResult(**v))
 
 
 
