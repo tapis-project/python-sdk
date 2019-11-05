@@ -10,7 +10,10 @@ class DynaTapy(object):
     """
     A dynamic client for the Tapis API.
     """
-    RESOURCES = ['actors', 'tenants', 'tokens']
+    RESOURCES = ['actors',
+                 #'files',
+                 'tenants',
+                 'tokens',]
 
     def __init__(self,
                  base_url=None,
@@ -89,6 +92,9 @@ class Resource(object):
                 # each op_desc is an openapi_core.schema.operations.models.Operation object.
                 # the op_desc has a number of associated attributes, including operation_id, parameters, path_name, etc.
                 # we create an Operation object for each one of these:
+                if not op_desc.operation_id:
+                    print(f"invalid op_dec for {resource_name}; missing operation_id. op_dec: {op_desc}")
+                    continue
                 setattr(self, op_desc.operation_id, Operation(self.resource_name, op_desc, self.tapis_client))
 
 
@@ -178,9 +184,13 @@ class Operation(object):
         # construct the data -
         # todo --
         data = None
-        # these are the list of allowable content types; ex., 'application/json'.
+        # these are the list of allowable request bofy content types; ex., 'application/json'.
         content_types = self.op_desc.request_body.content.keys()
-        # if 'application/json' in content_types:
+        if 'application/json' in content_types:
+            headers['Content-Type'] = 'application/json'
+            for p_name, p_desc in self.op_desc.request_body.content['application/json'].schema.properties.items():
+                if p_name in kwargs:
+                    data[p_name] = kwargs[p_name]
 
         # create a prepared request -
         r = requests.Request(http_method,
@@ -192,15 +202,29 @@ class Operation(object):
 
         # return the response object -
         try:
-            # todo - the tapis_client.requests_session should be a request.Session object;
-            #        cf., https://requests.kennethreitz.org/en/master/user/advanced/#request-and-response-objects
+            # create a prepared request,
+            # cf., https://requests.kennethreitz.org/en/master/user/advanced/#request-and-response-objects
             resp = self.tapis_client.requests_session.send(r)
-            resp.raise_for_status()
-            # todo - deserialize response
-            return resp
         except Exception as e:
             # todo - handle exceptions
             raise e
+        # todo - check all status codes
+        if resp.status_code == 400:
+            raise tapy.errors.InvalidInputError()
+        if resp.status_code == 404:
+            raise tapy.errors.NotAuthorizedError()
+        if resp.status_code == 500:
+            raise tapy.errors.ServerDownError()
 
+        # todo - deserialize response.content['result']
+        return resp
+
+
+class TapisResult(object):
+    """
+    Represents a result returned from a single Tapis operation.
+    """
+    # todo - probably good enough to start with an AttrDict...
+    pass
 
 

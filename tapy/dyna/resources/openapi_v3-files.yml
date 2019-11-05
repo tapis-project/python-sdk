@@ -1,0 +1,724 @@
+openapi: 3.0.0
+# Added by API Auto Mocking Plugin
+info:
+  version: "0.0.1"
+  title: TAPIS Files API
+  description: >-
+    The files service of TAPIS provides data management and sharing across multiple storage systems using multiple protocols.
+servers:
+  - url: htttps://tapis.tacc.utexas.edu/v3/files/
+
+tags:
+  - name: file operations
+    description: >
+      Basic file operations
+  - name: transfers
+    description: >
+      Transfers move data into a storage system or move data within a storage system. Operations __move__ and __copy__
+      are also implemented as transfers as they could be costly.
+  - name: permissions
+    description: >
+      ## QUESTION: Do we need to mirror permissions in our database? I think so, in order to do things like permissions list
+      or else have to have some strange logic in the SK.
+
+      Grant long term permissions to a specific user to a file resource.
+  - name: share
+    description: >
+
+      Allow other users temporary access to file resources. The user must have the SHARE privilege on the file path being shared.
+
+paths:
+  /systems/{systemId}:
+    get:
+      summary: List files/objects in a storage system.
+      tags:
+        - file operations
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: query
+          name: path
+          schema:
+            type: string
+          required: false
+          description: path relative to root of bucket
+          example: /folderA/folderB/
+        - in: query
+          name: meta
+          schema:
+            type: boolean
+            default: false
+          required: false
+          description: Return metadata also? This will slow down the request.
+      operationId: filesList
+      description: List files in a bucket
+      responses:
+        '200':
+          description: A list of files
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/FileInfo"
+    post:
+      summary: Create a directory in a specified path
+      tags:
+        - file operations
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+      requestBody:
+        $ref: '#/components/requestBodies/MkdirRequestBody'
+      responses:
+        '200':
+          description: OK
+
+  /systems/{systemId}/{path}:
+    get:
+      summary: Retrieve a file from the files service
+      tags:
+        - file operations
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: File path
+          example: folderA/folderB/example.txt
+
+        - in: header
+          name: Range
+          schema:
+            type: string
+          required: false
+          description: Range of bytes to send
+          example: bytes=0-64
+
+      operationId: filesGetContents
+      description: Get file contents/serve file
+      responses:
+        '200':
+          description: OK
+    delete:
+      summary: Delete a file
+      tags:
+        - file operations
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: File path
+          example: folderA/folderB/example.txt
+      operationId: filesDeleteObject
+      description: Delete a file/folder
+      responses:
+        '200':
+          description: Success
+
+    put:
+      summary: Rename a file or folder
+      tags:
+        - file operations
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: File path
+          example: folderA/folderB/example.txt
+        - in: query
+          name: newName
+          required: true
+          schema:
+            type: string
+          example: MyNewfile.txt
+
+      operationId: filesRenameObject
+      description: Rename a file in {systemID} at path {path}.
+      responses:
+        '200':
+          description: OK
+    post:
+      summary: Upload a file
+      tags:
+        - file operations
+      description: The file will be added at the {path} independent of the original file name
+      operationId: filesPostForm
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: 'folderA/folderB/example.txt'
+        - in: header
+          name: x-meta
+          schema:
+            type: string
+          required: false
+          description: String dump of a valid JSON object to be associated with the file
+          example: '{"key": "value", "args":[1,2,3]}'
+      requestBody:
+        $ref: '#/components/requestBodies/FileUploadRequestBody'
+      responses:
+        '200':
+          description: OK
+
+
+  /permissions/{systemId}/{path}:
+    get:
+      tags:
+        - permissions
+      summary: List permissions on an file/folder
+      description: >
+        Returns a list of roles/users that can access the file
+        QUESTION: Who should be able to see access this? Only the owner of the system?
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: folderA/folderB/example.txt
+      responses:
+        '200':
+          description: FilePermission
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/FilePermission'
+    post:
+      tags:
+        - permissions
+      summary: >
+        Add permissions on an object.
+
+      description: >
+        Add a user to a file/folder. QUESTION - who should be able to add permissions? Only the owner?
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: folderA/folderB/example.txt
+      responses:
+        '200':
+          description: FilePermission
+          content:
+            application/json:
+              schema:
+                  $ref: '#/components/schemas/FilePermission'
+    delete:
+      tags:
+        - permissions
+      summary: >
+        Remove permissions on an object for a user.
+
+      description: >
+        Remove user permissions to a file/folder. QUESTION - who should be able to delete permissions? Only the owner?
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: folderA/folderB/example.txt
+        - in: query
+          name: username
+          schema:
+            type: string
+          required: true
+          description: Username to remove
+          example: someUser
+      responses:
+        '200':
+          description: FilePermission
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferTask'
+
+  /transfers:
+    post:
+      tags:
+        - transfers
+      summary: >
+        Transfer data
+      description: >
+        This creates a background task which will transfer files into the storage system
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: Source System ID
+          example: my.system
+        #- in: path
+        #  name: path
+        #  schema:
+        #    type: string
+        #  required: true
+        #  description: Relative path
+        #  example: folderA/folderB/example.txt
+      requestBody:
+        $ref: '#/components/requestBodies/TransferRequestBody'
+      responses:
+        '200':
+          description: A task ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferResponse'
+
+  /transfers/{transferTaskId}/:
+    get:
+      tags:
+        - transfers
+      summary: >
+        Transfer task status
+      description: >
+        Get the status of a transfer task
+      parameters:
+        - in: path
+          name: transferTaskId
+          schema:
+            type: string
+          required: true
+          description: ID of transfer task
+          example: e9f99886-4b5f-49a0-99f8-4f6889567a13
+      responses:
+        '200':
+          description: Transfer task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferTask'
+    delete:
+      tags:
+        - transfers
+      summary: >
+        Stop/Cancel an outstanding transfer request
+      parameters:
+        - in: path
+          name: transferTaskId
+          schema:
+            type: string
+          required: true
+          description: ID of transfer task
+          example: e9f99886-4b5f-49a0-99f8-4f6889567a13
+      responses:
+        '200':
+          description: Transfer task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferTask'
+
+  /transfers/{transferTaskId}/history:
+    get:
+      tags:
+        - transfers
+      summary: >
+        Transfer task history
+      description: >
+        Get the history information of a transfer task
+      parameters:
+        - in: path
+          name: transferTaskId
+          schema:
+            type: string
+          required: true
+          description: ID of transfer task
+          example: e9f99886-4b5f-49a0-99f8-4f6889567a13
+      responses:
+        '200':
+          description: Transfer task
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TransferTaskHistory'
+
+  /share/{systemId}/{path}:
+    get:
+      tags:
+        - share
+      summary: >
+        List the shares on a file resource.
+      description: >
+        List all shares on a given file resource.
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: folderA/folderB/example.txt
+      responses:
+        '200':
+          description: List of shares
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SharedFileObject'
+
+    post:
+      tags:
+        - share
+      summary: >
+        Grant temporary access to a file resource.
+      description: >
+        Creates a link that is valid for the requested validity time for the given user for the resource in {systemId}
+        at path {path}
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: folderA/folderB/example.txt
+      requestBody:
+        $ref: '#/components/requestBodies/ShareFileRequestBody'
+      responses:
+        '200':
+          description: Shared file object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedFileObject'
+    delete:
+      tags:
+        - share
+      summary: >
+        Revoke a shared file resource
+      description: >
+        Removes any outstanding shares on a file resource.
+      parameters:
+        - in: path
+          name: systemId
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: my.system
+        - in: path
+          name: path
+          schema:
+            type: string
+          required: true
+          description: System ID
+          example: folderA/folderB/example.txt
+      responses:
+        '200':
+          description: Shared file object
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SharedFileObject'
+
+
+components:
+  securitySchemes:
+    application:
+      type: oauth2
+      flows:
+        clientCredentials:
+          tokenUrl: 'https://tapis.tacc.utexas.edu/v3/auth/token'
+          scopes:
+            write: allows modifying resources
+            read: allows reading resources
+  requestBodies:
+
+    MkdirRequestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/MkdirRequest'
+
+    ShareFileRequestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/NewShareFile'
+
+    FileUploadRequestBody:
+      content:
+        multipart/form-data:
+          schema:
+            $ref: '#/components/schemas/FileUploadForm'
+
+    TransferRequestBody:
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/TransferRequest'
+    FilesPutRequest:
+      content:
+        application/json:
+          schema:
+            oneOf:
+              - $ref: '#/components/schemas/FileMoveRequest'
+              - $ref: '#/components/schemas/FileRenameRequest'
+
+  schemas:
+    NewShareFile:
+      type: object
+      properties:
+        username:
+          type: string
+          description: The user with which to share
+        expiresIn:
+          type: integer
+          minimum: 1
+          maximum: 604800
+          description: Time in seconds of expiration. minimum=1, maximum=604800 (1 week)
+      required:
+        - username
+        - expiresIn
+
+    FilePermission:
+      type: object
+      properties:
+        username:
+          type: string
+        created:
+          type: string
+
+    TransferTask:
+      type: object
+      properties:
+        uuid:
+          type: string
+          description: Unique ID of the task.
+        created:
+          type: string
+          description: Timestamp in UTC of task creation.
+        status:
+          type: string
+          example: 'PENDING'
+          description: The status of the task, such as PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+
+    TransferTaskHistory:
+      type: array
+      properties:
+        uuid:
+          type: string
+          description: Unique ID of the task.
+        created:
+          type: string
+          description: Timestamp in UTC of task creation.
+        status:
+          type: string
+          example: 'PENDING'
+          description: The status of the task, such as PENDING, IN_PROGRESS, COMPLETED, CANCELLED
+
+    SharedFileObject:
+      type: object
+      properties:
+        creatorUsername:
+          type: string
+          description: Username who shared the file/folder
+        sharedWithUsername:
+          type: string
+          description: Username who was granted access
+        created:
+          type: string
+          description: Creation timestamp in UTC
+        expiresIn:
+          type: integer
+          description: Number of seconds in which the share was set to expire.
+        url:
+          type: string
+          description: Link to the shared file. MUST be in the format of a URL.
+
+    FileUploadForm:
+      type: object
+      properties:
+        fileName:
+          type: string
+          format: binary
+      required:
+        - fileName
+
+    MkdirRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: ['mkdir']
+        path:
+          type: string
+          example: 'folder1/folder1234'
+      required:
+        - action
+        - path
+
+
+
+    FileMoveRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: ['move']
+        newPath:
+          type: string
+          example: 'folder1/folder1234/'
+      required:
+        - action
+        - newPath
+
+    FileRenameRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: ['move']
+        newName:
+          type: string
+          example: 'newImage.jpg'
+      required:
+        - action
+        - newName
+
+    FileInfo:
+      type: object
+      properties:
+        lastModified:
+          type: string
+        name:
+          type: string
+        path:
+          type: string
+        systemId:
+          type: string
+        size:
+          type: integer
+          description: size in kB
+
+    TransferResponse:
+      type: object
+      properties:
+        taskId:
+          type: string
+          example: e9f99886-4b5f-49a0-99f8-4f6889567a13
+          description: Unique transfer task ID
+        created:
+          type: string
+          example: '2019-10-12T12:25:34.000Z'
+          description: UTC timestamp of task creation
+
+
+    TransferRequest:
+      type: object
+      properties:
+        action:
+          type: string
+          enum: ['mv', 'cp']
+        sourceSystem:
+          type: string
+          example: system1
+        sourcePath:
+          type: string
+          example: test/test1.txt
+        targetSystem:
+          type: string
+          example: system123
+        targetPath:
+          type: string
+          example: /folder1/folder2/
+      required:
+        - action
+        - sourceSystem
+        - sourcePath
+        - targetSystem
+        - targetPath
