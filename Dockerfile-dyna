@@ -2,7 +2,7 @@
 # Build: docker build -t tapis/dynatapy -f Dockerfile-dyna .
 # Try it: docker run -it --network tenants-api_tenants --rm tapis/dynatapy bash
 
-from tapis/tenants-api:dev
+from tapis/flaskbase
 
 USER root
 ADD tapy/dyna/requirements.txt /home/tapis/requirements.txt

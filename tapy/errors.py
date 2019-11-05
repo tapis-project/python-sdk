@@ -2,13 +2,16 @@ class BaseTapyException(Exception):
     """
     Base Tapy error class. All Error types should descend from this class.
     """
-    def __init__(self, msg=None, response=None):
+    def __init__(self, msg=None, version=None, request=None, response=None):
         """
         Create a new TapisError object.
         :param msg: (str) A helpful string
+        :param request: (requests.Request) The HTTP request object from the request.
         :param response: (requests.Response) The HTTP response object from the request.
         """
-        self.msg = msg
+        self.message = msg
+        self.version = version
+        self.request = request
         self.response = response
 
 
@@ -34,6 +37,11 @@ class NotAuthorizedError(BaseTapyException):
 
 class InvalidInputError(BaseTapyException):
     """The input provided to the function was not valid."""
+    pass
+
+
+class InvalidServerResponseError(BaseTapyException):
+    """Tapy got a response from the Tapis service that it didn't understand."""
     pass
 
 

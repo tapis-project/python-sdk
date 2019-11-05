@@ -1,9 +1,18 @@
+from collections.abc import Sequence
 import requests
 from openapi_core import create_spec
 from openapi_core.schema.parameters.enums import ParameterLocation
 import yaml
 
 import tapy.errors
+
+def _seq_but_not_str(obj):
+    """
+    Determine if an object is a Sequence, i.e., has an iteratable type, but not a string, bytearray, etc.
+    :param obj: Any python object.
+    :return:
+    """
+    return isinstance(obj, Sequence) and not isinstance(obj, (str, bytes, bytearray))
 
 
 class DynaTapy(object):
@@ -158,8 +167,10 @@ class Operation(object):
             if param.required:
                 if param.name not in kwargs:
                     raise tapy.errors.InvalidInputError(f"{param.name} is a required argument.")
-            p_val = kwargs.pop(param.name)
-            params[param.name] = p_val
+            # only set the parameter if it was actually sent in the function -
+            if param.name in kwargs:
+                p_val = kwargs.pop(param.name, None)
+                params[param.name] = p_val
 
         # construct the http headers -
         headers = {}
@@ -182,49 +193,90 @@ class Operation(object):
             raise tapy.errors.InvalidInputError("The headers argument, if passed, must be a dictionary-like object.")
 
         # construct the data -
-        # todo --
         data = None
         # these are the list of allowable request bofy content types; ex., 'application/json'.
-        content_types = self.op_desc.request_body.content.keys()
-        if 'application/json' in content_types:
-            headers['Content-Type'] = 'application/json'
-            for p_name, p_desc in self.op_desc.request_body.content['application/json'].schema.properties.items():
-                if p_name in kwargs:
-                    data[p_name] = kwargs[p_name]
+        if hasattr(self.op_desc.request_body, 'content') and hasattr(self.op_desc.request_body.content, 'keys'):
+            content_types = self.op_desc.request_body.content.keys()
+            if 'application/json' in content_types:
+                headers['Content-Type'] = 'application/json'
+                data = {}
+                for p_name, p_desc in self.op_desc.request_body.content['application/json'].schema.properties.items():
+                    if p_name in kwargs:
+                        data[p_name] = kwargs[p_name]
 
         # create a prepared request -
+        # cf., https://requests.kennethreitz.org/en/master/user/advanced/#request-and-response-objects
         r = requests.Request(http_method,
                              url,
                              params=params,
                              data=data,
-                             headers=headers,
-                             verify=self.tapis_client.verify).prepare()
+                             headers=headers).prepare()
 
-        # return the response object -
+        # make the request and return the response object -
         try:
-            # create a prepared request,
-            # cf., https://requests.kennethreitz.org/en/master/user/advanced/#request-and-response-objects
-            resp = self.tapis_client.requests_session.send(r)
+            resp = self.tapis_client.requests_session.send(r, verify=self.tapis_client.verify)
         except Exception as e:
-            # todo - handle exceptions
-            raise e
-        # todo - check all status codes
-        if resp.status_code == 400:
-            raise tapy.errors.InvalidInputError()
-        if resp.status_code == 404:
-            raise tapy.errors.NotAuthorizedError()
-        if resp.status_code == 500:
-            raise tapy.errors.ServerDownError()
+            # todo - handle different types of requests exceptions
+            msg = f"Unable to make request to Tapis server. Exception: {e}"
+            raise tapy.errors.BaseTapyException(msg=msg, request=r)
+        # for any kind of non-20x response, we need to raise an error.
+        if resp.status_code > 399:
+            # try to get the error message and version from the Tapis request:
+            try:
+                error_msg = resp.json().get('message')
+            except:
+                error_msg = resp.content
+            try:
+                version = resp.json().get('version')
+            except:
+                version = None
+        if resp.status_code in (400, 404):
+            raise tapy.errors.InvalidInputError(msg=error_msg, version=version, request=r, response=resp)
+        if resp.status_code in (401, 403):
+            raise tapy.errors.NotAuthorizedError(msg=error_msg, version=version, request=r, response=resp)
+        if resp.status_code in (500, ):
+            raise tapy.errors.ServerDownError(msg=error_msg, version=version, request=r, response=resp)
 
-        # todo - deserialize response.content['result']
-        return resp
+        # resp.headers is a case-insensitive dict, but the v
+        resp_content_type = resp.headers.get('content-type')
+        if hasattr(resp_content_type, 'lower') and resp_content_type.lower() == 'application/json':
+            try:
+                json_content = resp.json()
+            except Exception as e:
+                msg = f'Requests could not produce JSON from the response even though the content-type was ' \
+                      f'application/json. Exception: {e}'
+                raise tapy.errors.InvalidServerResponseError(msg=error_msg, version=version, request=r, response=resp)
+            # get the Tapis result objectm which could be a JSON object or list.
+            result = json_content.get('result')
+            # if it is a list we should return a list of TapisResult objects:
+            if _seq_but_not_str(result):
+                return [TapisResult(**x) for x in result]
+            # otherwise, assume it is a JSON object and return that directly as a result -
+            return TapisResult(**result)
+
+        # todo - note:
+        # For now, we do not try to handle other content-types, such as application/xml, etc. We just return
+        # the raw content as the result.
+        return resp.content
 
 
 class TapisResult(object):
     """
     Represents a result returned from a single Tapis operation.
     """
-    # todo - probably good enough to start with an AttrDict...
-    pass
+
+    PRIMITIVE_TYPES = [int, str, bool, bytearray, bytes, None]
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            # for primitive types, we just set the attribute to the value
+            if type(v) in TapisResult.PRIMITIVE_TYPES:
+                setattr(self, k, v)
+            # for lists, we
+            elif _seq_but_not_str(v):
+                setattr(self, k, [item for item in v])
+            # for complex types, we
+            else:
+                setattr(self, k, TapisResult(v))
+
 
 
