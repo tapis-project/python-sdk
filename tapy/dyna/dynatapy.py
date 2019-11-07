@@ -22,6 +22,7 @@ class DynaTapy(object):
     """
     RESOURCES = ['actors',
                  #'files', ## currently the files spec is missing operationId's for some of its operations.
+                 'sk',
                  'tenants',
                  'tokens',]
 
@@ -66,7 +67,8 @@ class DynaTapy(object):
                 spec_dict = yaml.load(open(spec_path, 'r'))
                 spec = create_spec(spec_dict)
             except Exception as e:
-                print("Got exception trying to load spec_path: {spec_path}")
+                print(f"Got exception trying to load spec_path: {spec_path}; exception: {e}")
+                raise e
             # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
             setattr(self, resource_name, Resource(resource_name, spec.paths, self))
 
@@ -164,7 +166,7 @@ class Operation(object):
         # derived attributes - for convenience
         self.operation_id = op_desc.operation_id
         self.http_method = op_desc.http_method
-        self.url = f'{self.tapis_client.base_url}/{self.op_desc.path_name}'
+        self.url = f'{self.tapis_client.base_url}{self.op_desc.path_name}'
         self.path_parameters = [p for _, p in op_desc.parameters.items() if p.location == ParameterLocation.PATH]
         self.query_parameters = [p for _, p in op_desc.parameters.items() if p.location == ParameterLocation.QUERY]
         self.request_body = op_desc.request_body
@@ -319,8 +321,8 @@ class TapisResult(object):
             # lists
             elif _seq_but_not_str(v):
                 # if the list has even one item of primitive type, just return a list
-                if len([item for item in v if item in TapisResult.PRIMITIVE_TYPES]) > 0:
-                    setattr(self, k, [item for item in v if item in TapisResult.PRIMITIVE_TYPES])
+                if len([item for item in v if type(item) in TapisResult.PRIMITIVE_TYPES]) > 0:
+                    setattr(self, k, v)
                 else:
                     setattr(self, k, [TapisResult(**item) for item in v])
             # for complex objects, create a TapisResult with the value
