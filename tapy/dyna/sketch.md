@@ -1,15 +1,19 @@
+
+
 # Usage
 
 ```bash
 
 from tapy.dyna.dynatapy import DynaTapy
-t = DynaTapy(base_url='http://tenants:5000', token='some_jwt')
+t = DynaTapy(base_url='http://nginx')
 
 # inspect the resources and the operations -
 t.tenants...
 
 t.tokens...
 ```
+
+## Results
 
 When you call a function, the result returned is a `TapisResult` or a `list[TapisResult]`
 ```
@@ -30,6 +34,7 @@ first_tenant.create_time
 Out[*]: 'Mon, 04 Nov 2019 20:09:18 GMT'
 ```
 
+## Validation
 The library handles validation or required parameters:
 
 ```
@@ -50,7 +55,10 @@ InvalidInputError                         Traceback (most recent call last)
 InvalidInputError: tenant_id is a required argument.
 ```
 
+## Exceptions
+
 DynaTapy Exceptions come with some attributes that are useful for debugging: 
+
 ```
 # try to create a tenant without an authentication token - 
 try: 
@@ -83,6 +91,8 @@ Out[*]: b'{"message":"No Tapis access token found in the request.","result":null
 
 ```
 
+
+## Authenticated Requests
 Get a token, set the token, create a tenant:
 
 ```
