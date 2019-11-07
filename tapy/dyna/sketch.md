@@ -2,6 +2,10 @@
 
 # Usage
 
+The following examples illustrate the use of `DynaTapy`. They assume
+the tenants and tokens APIs have been started using the dev stack in
+the `test` directory.
+
 ```bash
 
 from tapy.dyna.dynatapy import DynaTapy
