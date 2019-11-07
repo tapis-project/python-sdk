@@ -243,6 +243,7 @@ class Operation(object):
                         raise tapy.errors.InvalidInputError(msg=f'{p_name} is a required argument.')
                 # serialize data before passing it to the request
                 data = json.dumps(data)
+        # todo - handle other body content types..
 
         # create a prepared request -
         # cf., https://requests.kennethreitz.org/en/master/user/advanced/#request-and-response-objects
@@ -311,13 +312,18 @@ class TapisResult(object):
     PRIMITIVE_TYPES = [int, str, bool, bytearray, bytes, None]
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
-            # for primitive types, we just set the attribute to the value
+            # primitive types
             if type(v) in TapisResult.PRIMITIVE_TYPES:
+                # just set the attribute to the value
                 setattr(self, k, v)
-            # for lists, we
+            # lists
             elif _seq_but_not_str(v):
-                setattr(self, k, [item for item in v])
-            # for complex types, we
+                # if the list has even one item of primitive type, just return a list
+                if len([item for item in v if item in TapisResult.PRIMITIVE_TYPES]) > 0:
+                    setattr(self, k, [item for item in v if item in TapisResult.PRIMITIVE_TYPES])
+                else:
+                    setattr(self, k, [TapisResult(**item) for item in v])
+            # for complex objects, create a TapisResult with the value
             else:
                 setattr(self, k, TapisResult(**v))
 
