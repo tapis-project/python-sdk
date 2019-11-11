@@ -340,7 +340,10 @@ class Operation(object):
             result = json_content.get('result')
             # if it is a list we should return a list of TapisResult objects:
             if _seq_but_not_str(result):
-                return [TapisResult(**x) for x in result]
+                if len([item for item in result if type(item) in TapisResult.PRIMITIVE_TYPES]) > 0:
+                    return TapisResult(result)
+                else:
+                    return [TapisResult(**x) for x in result]
             # otherwise, assume it is a JSON object and return that directly as a result -
             try:
                 return TapisResult(**result)
@@ -359,8 +362,25 @@ class TapisResult(object):
     Represents a result returned from a single Tapis operation.
     """
 
-    PRIMITIVE_TYPES = [int, str, bool, bytearray, bytes, type(None)]
-    def __init__(self, **kwargs):
+    PRIMITIVE_TYPES = [int, str, bool, bytearray, bytes, float, type(None)]
+    def __init__(self, *args, **kwargs):
+        if args and kwargs:
+            msg = f"Could not instantiate result object; constructor got args and kwargs. args={args}; kwargs={kwargs}"
+            raise tapy.errors.BaseTapyException(msg=msg)
+        # is passing non-key-value args, there should be only one arg;
+        # it should be either a list or a primitive type:
+        if args:
+            if len(args) > 1:
+                msg = f"Could not instantiate result object; constructor got args of length > 1. args={args}."
+                raise tapy.errors.BaseTapyException(msg=msg)
+            arg = args[0]
+            # the arg is a list and not a string, there are two cases: 1) at least one object in the list is a
+            # primitive type, in which case we just return a list of the objects
+            if _seq_but_not_str(arg):
+                setattr(self, 'result', [x for x in arg])
+            else:
+                setattr(self, 'result', arg)
+
         for k, v in kwargs.items():
             # primitive types
             if type(v) in TapisResult.PRIMITIVE_TYPES:
@@ -379,7 +399,7 @@ class TapisResult(object):
 
     def __str__(self):
         attrs = '\n'.join([f'{str(a)}: {getattr(self, a)}' for a in dir(self) if not a.startswith('__') and not a.startswith('PRIMITIVE_TYPES')])
-        return f'\n {attrs}'
+        return f'\n{attrs}'
 
     def __repr__(self):
         return str(self)

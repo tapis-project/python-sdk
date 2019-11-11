@@ -1,0 +1,15 @@
+# image: tapis/pysdk-tests
+FROM tapis/dynatapy
+
+ADD requirements.txt /home/tapis/tests/requirements.txt
+
+USER root
+RUN pip install -r /home/tapis/tests/requirements.txt
+# RUN chmod -R tapis:tapis /home/tapis
+
+User tapis
+ADD tests-integration.py /home/tapis/tests-integration.py
+ADD configschema.json /home/tapis/configschema.json
+ADD config-dev-develop.json /home/tapis/config.json
+
+ENTRYPOINT ["pytest", "/home/tapis/tests-integration.py"]
