@@ -17,6 +17,18 @@ t.tenants...
 t.tokens...
 ```
 
+## Interact with the Develop Instance
+
+Create a client pointing to the develop environment.
+
+```bash
+
+t = DynaTapy(base_url='https://dev.develop.tapis.io', token_username='tenants', account_type='service', token_tenant_id='dev')
+t.get_tokens()
+t.access_token.expires_at                                                                           
+Out[*]: '2019-11-12 16:57:48.982899'
+```
+
 ## Results
 
 When you call a function, the result returned is a `TapisResult` or a `list[TapisResult]`

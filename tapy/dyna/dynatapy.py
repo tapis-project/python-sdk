@@ -359,7 +359,7 @@ class TapisResult(object):
     Represents a result returned from a single Tapis operation.
     """
 
-    PRIMITIVE_TYPES = [int, str, bool, bytearray, bytes, None]
+    PRIMITIVE_TYPES = [int, str, bool, bytearray, bytes, type(None)]
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             # primitive types
@@ -377,5 +377,10 @@ class TapisResult(object):
             else:
                 setattr(self, k, TapisResult(**v))
 
+    def __str__(self):
+        attrs = '\n'.join([f'{str(a)}: {getattr(self, a)}' for a in dir(self) if not a.startswith('__') and not a.startswith('PRIMITIVE_TYPES')])
+        return f'\n {attrs}'
 
+    def __repr__(self):
+        return str(self)
 
