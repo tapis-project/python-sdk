@@ -170,3 +170,64 @@ def test_get_owners(client):
     owner = client.tenants.get_owner(email='jstubbs@tacc.utexas.edu')
     assert owner.email == 'jstubbs@tacc.utexas.edu'
     assert owner.name == 'Joe Stubbs'
+
+
+# ---------------------
+# Security Kernel tests -
+# ---------------------
+
+def test_list_roles(client):
+    roles = client.sk.getRoleNames()
+    assert hasattr(roles, 'names')
+    assert type(roles.names) == list
+    if len(roles.names) > 0:
+        assert type(roles.names[0]) == str
+
+def test_create_role(client):
+    # first, make sure role is not there -
+    try:
+        client.sk.deleteRoleByName(roleName='pysdk_test_role')
+    except:
+        pass
+    # create the test role -
+    role = client.sk.createRole(roleName='pysdk_test_role', description='test role created by pysdk')
+    assert hasattr(role, 'url')
+
+def test_role_user_list_initially_empty(client):
+    users = client.sk.getUsersWithRole(roleName='pysdk_test_role')
+    assert users.names == []
+
+def test_add_user_to_role(client):
+    result = client.sk.grantRole(roleName='pysdk_test_role', user='tenants')
+    assert hasattr(result, 'changes')
+    assert result.changes == 1
+
+def test_user_has_role(client):
+    roles = client.sk.getUserRoles(user='tenants')
+    assert hasattr(roles, 'names')
+    assert type(roles.names) == list
+    assert 'pysdk_test_role' in roles.names
+
+def test_user_in_role_user_list(client):
+    users = client.sk.getUsersWithRole(roleName='pysdk_test_role')
+    assert hasattr(users, 'names')
+    assert type(users.names) == list
+    assert 'tenants' in users.names
+
+def test_remove_user_from_role(client):
+    result = client.sk.removeRole(roleName='pysdk_test_role', user='tenants')
+    assert hasattr(result, 'changes')
+    assert result.changes == 1
+
+def test_user_no_longer_in_role(client):
+    roles = client.sk.getUserRoles(user='tenants')
+    assert hasattr(roles, 'names')
+    assert type(roles.names) == list
+    assert 'tenants' not in roles.names
+
+def test_delete_role(client):
+    result = client.sk.deleteRoleByName(roleName='pysdk_test_role')
+    assert hasattr(result, 'changes')
+    assert result.changes == 1
+
+
