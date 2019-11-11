@@ -16,18 +16,41 @@ def _seq_but_not_str(obj):
     return isinstance(obj, Sequence) and not isinstance(obj, (str, bytes, bytearray))
 
 
+RESOURCES = ['actors',
+             #'files', ## currently the files spec is missing operationId's for some of its operations.
+             'sk',
+             'tenants',
+             'tokens',]
+
+def _getspec(resource_name):
+    """
+    Returns the openapi spec
+    :param resource_name: (str) the name of the resource.
+    :return: (openapi_core.schema.specs.models.Spec) The Spec object associated with this resource.
+    """
+    try:
+        # for now, hardcode the paths; we could look these up based on a canonical URL once that is
+        # established.
+        spec_path = f'/home/tapis/tapy/dyna/resources/openapi_v3-{resource_name}.yml'
+        spec_dict = yaml.load(open(spec_path, 'r'))
+        return create_spec(spec_dict)
+    except Exception as e:
+        print(f"Got exception trying to load spec_path: {spec_path}; exception: {e}")
+        raise e
+
+
+RESOURCE_SPECS = {resource: _getspec(resource) for resource in RESOURCES}
+
 class DynaTapy(object):
     """
     A dynamic client for the Tapis API.
     """
-    RESOURCES = ['actors',
-                 #'files', ## currently the files spec is missing operationId's for some of its operations.
-                 'sk',
-                 'tenants',
-                 'tokens',]
 
     def __init__(self,
                  base_url=None,
+                 username=None,
+                 tenant_id=None,
+                 account_type=None,
                  access_token=None,
                  refresh_token=None,
                  jwt=None,
@@ -37,6 +60,15 @@ class DynaTapy(object):
                  ):
         # the base_url for the server this Tapis client should interact with
         self.base_url = base_url
+
+        # the username associated with this Tapis client
+        self.username = username
+
+        # the tenant id associated with this Tapis client
+        self.tenant_id = tenant_id
+
+        # the account_type ("user" or "service") associated with this Tapis client
+        self.account_type = account_type
 
         # the access token to use -- should be an honest TapisResult access token.
         self.access_token = access_token
@@ -59,18 +91,33 @@ class DynaTapy(object):
         self.requests_session = requests.Session()
 
         # create resources for each API defined above. In the future we could make this more dynamic in multiple ways.
-        for resource_name in DynaTapy.RESOURCES:
-            try:
-                # for now, hardcode the paths; we could look these up based on a canonical URL once that is
-                # established.
-                spec_path = f'/home/tapis/tapy/dyna/resources/openapi_v3-{resource_name}.yml'
-                spec_dict = yaml.load(open(spec_path, 'r'))
-                spec = create_spec(spec_dict)
-            except Exception as e:
-                print(f"Got exception trying to load spec_path: {spec_path}; exception: {e}")
-                raise e
+        for resource_name, spec in RESOURCE_SPECS.items():
             # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
             setattr(self, resource_name, Resource(resource_name, spec.paths, self))
+
+    def get_tokens(self, **kwargs):
+        """
+        Calls the Tapis Tokens API to get access and refresh tokens and set them on the client.
+        :return: 
+        """
+        if not 'username' in kwargs:
+            username = self.username
+        if not 'tenant_id' in kwargs:
+            tenant_id = self.tenant_id
+        if not 'access_token_ttl' in kwargs:
+            # default to a 24 hour access token -
+            access_token_ttl = 86400
+        if not 'refresh_token_ttl' in kwargs:
+            # default to 1 year refresh token -
+            refresh_token_ttl = 3153600000
+        tokens = self.tokens.create_token(token_username=username,
+                                          token_tenant_id=tenant_id,
+                                          account_type=self.account_type,
+                                          access_token_ttl=access_token_ttl,
+                                          generate_refresh_token=True,
+                                          refresh_token_ttl=refresh_token_ttl)
+        self.set_access_token(tokens.access_token)
+        self.set_refresh_token(tokens.refresh_token)
 
     def set_access_token(self, token):
         """
@@ -166,7 +213,6 @@ class Operation(object):
         # derived attributes - for convenience
         self.operation_id = op_desc.operation_id
         self.http_method = op_desc.http_method
-        self.url = f'{self.tapis_client.base_url}{self.op_desc.path_name}'
         self.path_parameters = [p for _, p in op_desc.parameters.items() if p.location == ParameterLocation.PATH]
         self.query_parameters = [p for _, p in op_desc.parameters.items() if p.location == ParameterLocation.QUERY]
         self.request_body = op_desc.request_body
@@ -185,6 +231,7 @@ class Operation(object):
         http_method = self.http_method.upper()
 
         # construct the http path -
+        self.url = f'{self.tapis_client.base_url}{self.op_desc.path_name}' # base url
         url = self.url
         for param in self.path_parameters:
             # look for the name in the kwargs
@@ -234,7 +281,8 @@ class Operation(object):
         data = None
         # these are the list of allowable request bofy content types; ex., 'application/json'.
         if hasattr(self.op_desc.request_body, 'content') and hasattr(self.op_desc.request_body.content, 'keys'):
-            if 'application/json' in self.op_desc.request_body.content.keys():
+            if 'application/json' in self.op_desc.request_body.content.keys() \
+                    or '*/*' in self.op_desc.request_body.content.keys():
                 headers['Content-Type'] = 'application/json'
                 required_fields = self.op_desc.request_body.content['application/json'].schema.required
                 data = {}

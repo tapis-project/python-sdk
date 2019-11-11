@@ -110,11 +110,12 @@ tokens.access_token
 tenant = {'tenant_id': 'dev',
  'base_url': 'https://dev.develop.tapis.io',
  'description': 'The dev tenant in the develop instance.',
- 'token_service': 'https://dev.develop.tapis.io/tokens',
- 'security_kernel': 'https://dev.develop.tapis.io/security',
+ 'token_service': 'https://dev.develop.tapis.io/v3/tokens',
+ 'security_kernel': 'https://dev.develop.tapis.io/v3/security',
  'is_owned_by_associate_site': True,
  'owner': 'jstubbs@tacc.utexas.edu',
- 'authenticator': 'https://dev.develop.tapis.io/oauth1',
+ 'authenticator': 'https://dev.develop.tapis.io/v3/oauth3',
+ 'allowable_x_tenant_ids': ['dev']
  }
  
  ```
