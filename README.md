@@ -2,6 +2,12 @@
 
 Python library for interacting with an instance of the Tapis API Framework.
 
+## Development
+
+This project is under active development, exploring different approaches to SDK generation.
+In particular, we have started work on a "dynamic" SDK, located in the ``dyna`` package within the
+main ``tapy`` package. See the [docs](tapy/dyna/sketch.md) within that section.  
+
 ## Installation
 
 TODO - setup on pypi, e.g., 
@@ -28,8 +34,3 @@ new_token = openapi_client.NewTokenRequest(token_type='service', token_tenant_id
 resp = api_instance.create_token(new_token)
 jwt = resp.get('result').get('access_token').get('access_token')
 ```
-
-## Development
-
-We have started work on a "dynamic" SDK, located in the ``dyna`` package within the
-main ``tapy`` package. See the [docs](tapy/dyna/sketch.md) within that section.  
