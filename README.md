@@ -31,4 +31,5 @@ jwt = resp.get('result').get('access_token').get('access_token')
 
 ## Development
 
-There are steps to 
+We have started work on a "dynamic" SDK, located in the ``dyna`` package within the
+main ``tapy`` package. See the [docs](tapy/dyna/sketch.md) within that section.  
