@@ -14,6 +14,12 @@ class BaseTapyException(Exception):
         self.request = request
         self.response = response
 
+    def __str__(self):
+        return f'message: {self.message}'
+
+    def __repr__(self):
+        return str(self)
+
 
 class TapyClientNotImplementedError(BaseTapyException):
     """The Tapy client has not implemented the requested functionality yet."""
