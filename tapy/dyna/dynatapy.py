@@ -231,7 +231,11 @@ class Operation(object):
         http_method = self.http_method.upper()
 
         # construct the http path -
-        self.url = f'{self.tapis_client.base_url}{self.op_desc.path_name}' # base url
+        # some API definitions, such as SK, chose to not include the "/v3/" at the beginning of their paths, so we add it in:
+        if not self.op_desc.path_name.startswith('/v3/'):
+            self.url = f'{self.tapis_client.base_url}/v3{self.op_desc.path_name}' # base url
+        else:
+            self.url = f'{self.tapis_client.base_url}{self.op_desc.path_name}'  # base url
         url = self.url
         for param in self.path_parameters:
             # look for the name in the kwargs
@@ -327,6 +331,8 @@ class Operation(object):
         if resp.status_code in (500, ):
             raise tapy.errors.ServerDownError(msg=error_msg, version=version, request=r, response=resp)
 
+        # get the result's operation ids from the custom x-response-operation-ids for this operation id.from
+        # results_operation_ids = [...]
         # resp.headers is a case-insensitive dict, but the v
         resp_content_type = resp.headers.get('content-type')
         if hasattr(resp_content_type, 'lower') and resp_content_type.lower() == 'application/json':
