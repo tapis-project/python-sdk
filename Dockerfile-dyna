@@ -1,4 +1,4 @@
-# Image: tapis/dyntapy
+# Image: tapis/dynatapy
 # Build: docker build -t tapis/dynatapy -f Dockerfile-dyna .
 # Try it: docker run -it --network tenants-api_tenants --rm tapis/dynatapy bash
 
