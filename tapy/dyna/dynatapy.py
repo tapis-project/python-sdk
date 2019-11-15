@@ -1,4 +1,5 @@
 from collections.abc import Sequence
+import datetime
 import json
 import requests
 from openapi_core import create_spec
@@ -125,7 +126,19 @@ class DynaTapy(object):
         :param token: (TapisResult) A TapisResult object returned using the t.tokens.create_token() method.
         :return:
         """
+
+        def _expires_in():
+            return self.access_token.expires_at - datetime.datetime.now(datetime.timezone.utc)
+
         self.access_token = token
+        # avoid circular imports by nesting this import here - the common.auth module has to import dynatapy at
+        # initialization to make create service clients.
+        from common.auth import validate_token
+        self.access_token.claims = validate_token(self.access_token.access_token)
+        self.access_token.original_ttl = self.access_token.expires_in
+        self.access_token.expires_in = _expires_in
+        self.access_token.expires_at = datetime.datetime.fromtimestamp(self.access_token.claims['exp'], datetime.timezone.utc)
+
 
     def set_refresh_token(self, token):
         """
