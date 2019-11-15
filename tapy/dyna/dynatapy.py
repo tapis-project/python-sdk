@@ -346,6 +346,9 @@ class Operation(object):
             raise tapy.errors.NotAuthorizedError(msg=error_msg, version=version, request=r, response=resp)
         if resp.status_code in (500, ):
             raise tapy.errors.ServerDownError(msg=error_msg, version=version, request=r, response=resp)
+        # catch-all for any other non-20x response:
+        if resp.status_code >= 300:
+            raise tapy.errors.BaseTapyException(msg=error_msg, version=version, request=r, response=resp)
 
         # get the result's operation ids from the custom x-response-operation-ids for this operation id.from
         # results_operation_ids = [...]
