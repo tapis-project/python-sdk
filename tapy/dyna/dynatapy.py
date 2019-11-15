@@ -133,11 +133,14 @@ class DynaTapy(object):
         self.access_token = token
         # avoid circular imports by nesting this import here - the common.auth module has to import dynatapy at
         # initialization to make create service clients.
-        from common.auth import validate_token
-        self.access_token.claims = validate_token(self.access_token.access_token)
-        self.access_token.original_ttl = self.access_token.expires_in
-        self.access_token.expires_in = _expires_in
-        self.access_token.expires_at = datetime.datetime.fromtimestamp(self.access_token.claims['exp'], datetime.timezone.utc)
+        try:
+            from common.auth import validate_token
+            self.access_token.claims = validate_token(self.access_token.access_token)
+            self.access_token.original_ttl = self.access_token.expires_in
+            self.access_token.expires_in = _expires_in
+            self.access_token.expires_at = datetime.datetime.fromtimestamp(self.access_token.claims['exp'], datetime.timezone.utc)
+        except:
+            pass
 
 
     def set_refresh_token(self, token):
