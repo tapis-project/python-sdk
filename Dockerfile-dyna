@@ -8,6 +8,9 @@ USER root
 ADD tapy/dyna/requirements.txt /home/tapis/requirements.txt
 RUN pip install -r /home/tapis/requirements.txt
 
+ADD test/configschema.json /home/tapis/configschema.json
+ADD test/config-dev-develop.json /home/tapis/config.json
+
 ADD tapy /home/tapis/tapy
 
 RUN chown -R tapis:tapis /home/tapis
