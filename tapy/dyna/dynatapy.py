@@ -84,6 +84,12 @@ class DynaTapy(object):
         # tenant_id and username.
         self.x_tenant_id = x_tenant_id
         self.x_username = x_username
+        # it the caller did not explicitly set the x_tenant_id and x_username headers, and this is a service token
+        # set them for the caller.
+        if not self.x_tenant_id and not self.x_username:
+            if self.account_type == 'service':
+                self.x_tenant_id = self.tenant_id
+                self.x_username = self.username
 
         # whether to verify the TLS certificate at the base_url
         self.verify = verify
@@ -289,7 +295,7 @@ class Operation(object):
         if self.tapis_client.x_tenant_id:
             headers['X-Tapis-Tenant'] = self.tapis_client.x_tenant_id
         if self.tapis_client.x_username:
-            headers['X-Tapis-Username'] = self.tapis_client.x_username
+            headers['X-Tapis-User'] = self.tapis_client.x_username
 
         # allow arbitrary headers to be passed in via the special "headers" kwarg -
         try:
