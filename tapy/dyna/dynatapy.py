@@ -176,6 +176,17 @@ class DynaTapy(object):
             return self.jwt
         return None
 
+    def set_tenant(self, tenant_id, base_url):
+        """
+        Reconfigure the client to interact with a specific tenant; particularly useful for services that need to serve
+        multiple tenants.
+        :param tenant_id: (str) The tenant_id to configure the client to interact with.
+        :param base_url: (str) The base_url of the tenant to configure the client to interact with.
+        :return:
+        """
+        self.tenant_id = tenant_id
+        self.base_url = base_url
+
 
 class Resource(object):
     """
@@ -369,18 +380,23 @@ class Operation(object):
                 raise tapy.errors.InvalidServerResponseError(msg=error_msg, version=version, request=r, response=resp)
             # get the Tapis result objectm which could be a JSON object or list.
             result = json_content.get('result')
-            # if it is a list we should return a list of TapisResult objects:
-            if _seq_but_not_str(result):
-                if len([item for item in result if type(item) in TapisResult.PRIMITIVE_TYPES]) > 0:
-                    return TapisResult(result)
-                else:
-                    return [TapisResult(**x) for x in result]
-            # otherwise, assume it is a JSON object and return that directly as a result -
-            try:
-                return TapisResult(**result)
-            except Exception as e:
-                msg = f'Failed to serialize the result object. Got exception: {e}'
-                raise tapy.errors.InvalidServerResponseError(msg=msg, version=version, request=r, response=resp)
+            # handle responses that do not have the standard Tapis stanzas.
+            if result:
+                # if it is a list we should return a list of TapisResult objects:
+                if _seq_but_not_str(result):
+                    if len([item for item in result if type(item) in TapisResult.PRIMITIVE_TYPES]) > 0:
+                        return TapisResult(result)
+                    else:
+                        return [TapisResult(**x) for x in result]
+                # otherwise, assume it is a JSON object and return that directly as a result -
+                try:
+                    return TapisResult(**result)
+                except Exception as e:
+                    msg = f'Failed to serialize the result object. Got exception: {e}'
+                    raise tapy.errors.InvalidServerResponseError(msg=msg, version=version, request=r, response=resp)
+            else:
+                # the response was JSON but not the standard Tapis 4 stanzas, so just return the JSON content:
+                return json_content
 
         # todo - note:
         # For now, we do not try to handle other content-types, such as application/xml, etc. We just return
