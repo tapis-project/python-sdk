@@ -185,7 +185,10 @@ class DynaTapy(object):
         :return:
         """
         self.tenant_id = tenant_id
+        if self.account_type == 'service':
+            self.x_tenant_id = tenant_id
         self.base_url = base_url
+
 
 
 class Resource(object):
