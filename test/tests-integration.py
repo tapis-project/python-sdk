@@ -214,8 +214,8 @@ def test_user_in_role_user_list(client):
     assert type(users.names) == list
     assert 'tenants' in users.names
 
-def test_remove_user_from_role(client):
-    result = client.sk.removeRole(roleName='pysdk_test_role', user='tenants')
+def test_revoke_user_from_role(client):
+    result = client.sk.revokeUserRole(roleName='pysdk_test_role', user='tenants')
     assert hasattr(result, 'changes')
     assert result.changes == 1
 
