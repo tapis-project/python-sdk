@@ -231,3 +231,25 @@ def test_delete_role(client):
     assert result.changes == 1
 
 
+# ---------------------
+# Metadata tests -
+# ---------------------
+def test_create_coll(client):
+    result = client.meta.createCollection(db='testdb', collection='testcoll')
+
+def test_get_coll_names(client):
+    result = client.meta.listCollectionNames(db='testdb')
+    assert 'testcoll' in str(result)
+
+#delete collection cannot be exercised as it needs additional header If-Match
+
+def test_create_doc(client):
+    result = client.meta.createDocument(db='testdb', collection='testcoll')
+    assert str(result)!= ''
+
+def test_get_doc_(client):
+    result = client.meta.getDocument(db='testdb', collection='testcoll', docId='5e45b2cca93eebf39fbe1043')
+    assert 'testdoc' in str(result)
+
+
+
