@@ -1,6 +1,6 @@
 # Image: tapis/dynatapy
 # Build: docker build -t tapis/dynatapy -f Dockerfile-dyna .
-# Try it: docker run -it --network tenants-api_tenants --rm tapis/dynatapy bash
+# Try it: docker run -it --rm tapis/dynatapy bash; docker run -it --network tenants-api_tenants --rm tapis/dynatapy bash
 
 from tapis/flaskbase
 
