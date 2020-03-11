@@ -334,19 +334,25 @@ class Operation(object):
 
         # construct the data -
         data = None
-        # these are the list of allowable request bofy content types; ex., 'application/json'.
+        # these are the list of allowable request body content types; ex., 'application/json'.
         if hasattr(self.op_desc.request_body, 'content') and hasattr(self.op_desc.request_body.content, 'keys'):
             if 'application/json' in self.op_desc.request_body.content.keys() \
                     or '*/*' in self.op_desc.request_body.content.keys():
                 headers['Content-Type'] = 'application/json'
                 required_fields = self.op_desc.request_body.content['application/json'].schema.required
                 data = {}
-                for p_name, p_desc in self.op_desc.request_body.content['application/json'].schema.properties.items():
-                    if p_name in kwargs:
-                        data[p_name] = kwargs[p_name]
-                    elif p_name in required_fields:
-                        raise tapy.errors.InvalidInputError(msg=f'{p_name} is a required argument.')
-                # serialize data before passing it to the request
+                # if the request body has no defined properties, look for a single "request_body" parameter.
+                if self.op_desc.request_body.content['application/json'].schema.properties == {}:
+                    # choice of "data" is arbitrary, as the property name is not provided by the openapi spec in this case
+                    data = kwargs['request_body']
+                else:
+                    # otherwise, the request body has defined properties, so look for each one in the function kwargs
+                    for p_name, p_desc in self.op_desc.request_body.content['application/json'].schema.properties.items():
+                        if p_name in kwargs:
+                            data[p_name] = kwargs[p_name]
+                        elif p_name in required_fields:
+                            raise tapy.errors.InvalidInputError(msg=f'{p_name} is a required argument.')
+                    # serialize data before passing it to the request
                 data = json.dumps(data)
         # todo - handle other body content types..
 
