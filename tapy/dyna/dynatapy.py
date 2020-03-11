@@ -57,7 +57,8 @@ class DynaTapy(object):
                  jwt=None,
                  x_tenant_id=None,
                  x_username=None,
-                 verify=True
+                 verify=True,
+                 service_password=None
                  ):
         # the base_url for the server this Tapis client should interact with
         self.base_url = base_url
@@ -94,6 +95,9 @@ class DynaTapy(object):
         # whether to verify the TLS certificate at the base_url
         self.verify = verify
 
+        # the service password, for service accounts to retrieve a token with.
+        self.service_password = service_password
+
         # the requests.Session object this client will use to prepare requests
         self.requests_session = requests.Session()
 
@@ -114,9 +118,19 @@ class DynaTapy(object):
         if not 'access_token_ttl' in kwargs:
             # default to a 24 hour access token -
             access_token_ttl = 86400
+        else:
+            access_token_ttl = kwargs['access_token_ttl']
         if not 'refresh_token_ttl' in kwargs:
             # default to 1 year refresh token -
             refresh_token_ttl = 3153600000
+        else:
+            refresh_token_ttl = kwargs['refresh_token_ttl']
+        service_password = None
+        if 'service_password' in kwargs:
+            service_password = kwargs['service_password']
+        elif self.service_password:
+            service_password = self.service_password
+
         tokens = self.tokens.create_token(token_username=username,
                                           token_tenant_id=tenant_id,
                                           account_type=self.account_type,
@@ -342,6 +356,12 @@ class Operation(object):
                              params=params,
                              data=data,
                              headers=headers).prepare()
+
+        # the create_token operation requires HTTP basic auth -
+        if self.resource_name == 'tokens' and self.operation_id == 'create_token':
+            basic_auth_header = requests.auth.HTTPBasicAuth(self.tapis_client.username,
+                                                            self.tapis_client.service_password)
+            basic_auth_header(r)
 
         # make the request and return the response object -
         try:
