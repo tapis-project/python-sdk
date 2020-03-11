@@ -18,6 +18,7 @@ def _seq_but_not_str(obj):
 
 
 RESOURCES = ['actors',
+             'meta',
              #'files', ## currently the files spec is missing operationId's for some of its operations.
              'sk',
              'tenants',
@@ -400,10 +401,15 @@ class Operation(object):
             except Exception as e:
                 msg = f'Requests could not produce JSON from the response even though the content-type was ' \
                       f'application/json. Exception: {e}'
-                raise tapy.errors.InvalidServerResponseError(msg=error_msg, version=version, request=r, response=resp)
+                #raise tapy.errors.InvalidServerResponseError(msg=error_msg, version=version, request=r, response=resp)
+                return resp.content
             # get the Tapis result objectm which could be a JSON object or list.
-            result = json_content.get('result')
-            # handle responses that do not have the standard Tapis stanzas.
+            try:
+                result = json_content.get('result')
+            except Exception as e:
+                msg =  f'Request did not produce json response'
+                return resp.content
+                # handle responses that do not have the standard Tapis stanzas.
             if result:
                 # if it is a list we should return a list of TapisResult objects:
                 if _seq_but_not_str(result):
