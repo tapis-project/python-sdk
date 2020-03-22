@@ -11,7 +11,7 @@ info:
   version: '0.1'
 externalDocs:
   description: Tapis Home
-  url: 'https://tacc-cloud.readthedocs.io/projects/agave'
+  url: 'https://tacc-cloud.readthedocs.io/projects/agave/en/latest/'
 servers:
   - url: 'http://localhost:8080/v3'
     description: Local test environment
@@ -32,9 +32,16 @@ paths:
     get:
       tags:
         - role
-      description: Get the names of all roles in the tenant in alphabetic order.
+      description: |-
+        Get the names of all roles in the tenant in alphabetic order.
+
+        A valid tenant must be specified as a query parameter.
       operationId: getRoleNames
       parameters:
+        - name: tenant
+          in: query
+          schema:
+            type: string
         - name: pretty
           in: query
           schema:
@@ -68,7 +75,10 @@ paths:
     post:
       tags:
         - role
-      description: 'Create a role using a request body.  Role names are case sensitive, alpha-numeric strings that can also contain underscores.  Role names must start with an alphbetic character and can be no more than 58 characters in length.  The desciption can be no more than 2048 characters long.  If the role already exists, this request has no effect.'
+      description: |-
+        Create a role using a request body.  Role names are case sensitive, alpha-numeric strings that can also contain underscores.  Role names must start with an alphbetic character and can be no more than 58 characters in length.  The desciption can be no more than 2048 characters long.  If the role already exists, this request has no effect.
+
+        A valid tenant and user must be specified in the request body.
       operationId: createRole
       parameters:
         - name: pretty
@@ -117,12 +127,16 @@ paths:
     get:
       tags:
         - role
-      description: Get the named role's definition.
+      description: Get the named role's definition.  A valid tenant must be specified as a query parameter.
       operationId: getRoleByName
       parameters:
         - name: roleName
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
           schema:
             type: string
         - name: pretty
@@ -164,12 +178,20 @@ paths:
     delete:
       tags:
         - role
-      description: Delete the named role.
+      description: Delete the named role. A valid tenant and user must be specified as query parameters.
       operationId: deleteRoleByName
       parameters:
         - name: roleName
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
           schema:
             type: string
         - name: pretty
@@ -206,12 +228,16 @@ paths:
     get:
       tags:
         - role
-      description: 'Get the named role''s permissions.  By default, all permissions assigned to the role, whether directly and transitively through child roles, are returned.  Set the immediate query parameter to only retrieve permissions directly assigned to the role.'
+      description: 'Get the named role''s permissions.  By default, all permissions assigned to the role, whether directly and transitively through child roles, are returned.  Set the immediate query parameter to only retrieve permissions directly assigned to the role.  A valid tenant must be specified.'
       operationId: getRolePermissions
       parameters:
         - name: roleName
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
           schema:
             type: string
         - name: immediate
@@ -259,7 +285,10 @@ paths:
     post:
       tags:
         - role
-      description: 'Update an existing role using a request body.  Role names are case sensitive, alphanumeric strings that can contain underscores but must begin with an alphabetic character.  The limit on role name is 58 characters.'
+      description: |-
+        Update an existing role using a request body.  Role names are case sensitive, alphanumeric strings that can contain underscores but must begin with an alphabetic character.  The limit on role name is 58 characters.
+
+        A valid tenant and user must be specified in the request body.
       operationId: updateRoleName
       parameters:
         - name: roleName
@@ -313,7 +342,7 @@ paths:
     post:
       tags:
         - role
-      description: Update an existing role using a request body.  The size limit on a description is 2048 characters.
+      description: Update an existing role using a request body.  The size limit on a description is 2048 characters.  A valid tenant and user must be specified in the request body.
       operationId: updateRoleDescription
       parameters:
         - name: roleName
@@ -374,6 +403,8 @@ paths:
             system:MyTenant:create,read,write,delete:*
 
         See the Shiro documentation for further details.  Note that the three reserved characters, [: * ,], cannot appear in the text of any part.  It's the application's responsibility to escape those characters in a manner that is safe in the application's domain.
+
+        A valid tenant and user must be specified in the request body.
       operationId: addRolePermission
       parameters:
         - name: pretty
@@ -422,7 +453,7 @@ paths:
     post:
       tags:
         - role
-      description: Remove a permission from a role using a request body.
+      description: Remove a permission from a role using a request body.  A valid tenant and user must be specified in the request body.
       operationId: removeRolePermission
       parameters:
         - name: pretty
@@ -471,7 +502,10 @@ paths:
     post:
       tags:
         - role
-      description: 'Add a child role to another role using a request body.  If the child already exists, then the request has no effect and the change count returned is zero. Otherwise, the child is added and the change count is one.'
+      description: |-
+        Add a child role to another role using a request body.  If the child already exists, then the request has no effect and the change count returned is zero. Otherwise, the child is added and the change count is one.
+
+        A valid tenant and user must be specified in the request body.
       operationId: addChildRole
       parameters:
         - name: pretty
@@ -520,7 +554,7 @@ paths:
     post:
       tags:
         - role
-      description: Remove a child role from a parent role using a request body.
+      description: Remove a child role from a parent role using a request body.  A valid tenant and user must be specified in the request body.
       operationId: removeChildRole
       parameters:
         - name: pretty
@@ -581,6 +615,8 @@ paths:
         When the newPrefix parameter is not provided no new characters are prepended to the new path, effectively just removing the oldPrefix from the new path. When neither oldPrefix nor newPrefix are provided, no path transformation occurs, though system IDs can still be transformed.
 
         The result object contains an array of transformation objects, each of which contains the unique permission sequence number, the existing permission that matched the search criteria and the new permission if the specified transformations were applied.
+
+        A valid tenant and user must be specified in the request body.
       operationId: previewPathPrefix
       parameters:
         - name: pretty
@@ -647,6 +683,8 @@ paths:
         The previewPathPrefix request provides a way to do a dry run using the same input as this request. The preview call calculates the permissions that would change and what their new values would be, but it does not actually change those permissions as replacePathPrefix does.
 
         The input parameters are passed in the payload of this request.  The response indicates the number of changed permission specifications.
+
+        A valid tenant and user must be specified in the request body.
       operationId: replacePathPrefix
       parameters:
         - name: pretty
@@ -793,7 +831,7 @@ paths:
     post:
       tags:
         - user
-      description: 'Check whether a user has been assigned the specified role, either directly or transitively.'
+      description: 'Check whether a user in a tenant has been assigned the specified role, either directly or transitively.'
       operationId: hasRole
       parameters:
         - name: pretty
@@ -839,6 +877,10 @@ paths:
       description: Get the names of all users in the tenant that have been granted a role or permission.
       operationId: getUserNames
       parameters:
+        - name: tenant
+          in: query
+          schema:
+            type: string
         - name: pretty
           in: query
           schema:
@@ -918,12 +960,16 @@ paths:
     get:
       tags:
         - user
-      description: 'Get the roles assigned to a user, including those assigned transively.'
+      description: 'Get the roles assigned to a user in the specified tenant, including those assigned transively.'
       operationId: getUserRoles
       parameters:
         - name: user
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
           schema:
             type: string
         - name: pretty
@@ -961,7 +1007,7 @@ paths:
       tags:
         - user
       description: |+
-        Get the permissions assigned to a user, including those assigned transively. The result list can be optionally filtered by the one or both of the query parameters, implies and impliedBy.
+        Get the permissions assigned to a user in a tenant, including those assigned transively.  The result list can be optionally filtered by the one or both of the query parameters: implies and impliedBy.
 
         The implied parameter removes permissions from the result list that the specified permission do not imply. The impliedBy parameter removes permissions from the result list that the specified permission are not implied by. Below are some examples.Consider a user that is assigned these permissions:
 
@@ -993,6 +1039,10 @@ paths:
         - name: user
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
           schema:
             type: string
         - name: implies
@@ -1039,7 +1089,7 @@ paths:
     post:
       tags:
         - user
-      description: Grant a user the specified role.
+      description: Grant a user the specified role.  A valid tenant and user must be specified in the request body.
       operationId: grantRole
       parameters:
         - name: pretty
@@ -1088,7 +1138,10 @@ paths:
     post:
       tags:
         - user
-      description: Revoke a previously granted role from a user. No action is taken if the user is not currently assigned the role. This request is idempotent.
+      description: |-
+        Revoke a previously granted role from a user. No action is taken if the user is not currently assigned the role. This request is idempotent.
+
+        A valid tenant and user must be specified in the request body.
       operationId: revokeUserRole
       parameters:
         - name: pretty
@@ -1179,7 +1232,10 @@ paths:
     post:
       tags:
         - user
-      description: Grant a user the specified role containing the specified permission.  This compound request first adds the permission to the role if it is not already a member of the role and then assigns the role to the user.  The change count returned can range from zero to two depending on how many insertions were actually required.
+      description: |-
+        Grant a user the specified role containing the specified permission.  This compound request first adds the permission to the role if it is not already a member of the role and then assigns the role to the user.  The change count returned can range from zero to two depending on how many insertions were actually required.
+
+        A valid tenant and user must be specified in the request body.
       operationId: grantRoleWithPermission
       parameters:
         - name: pretty
@@ -1232,6 +1288,8 @@ paths:
         Revoke the specified permission from the user's default role. A user's default role is constructed by prepending '$$' to the user's name. Default roles are created on demand. If the role does not exist when this method is called no error is reported and no changes occur.
 
         The change count returned can be zero or one depending on how many permissions were revoked.
+
+        A valid tenant and user must be specified in the request body.
       operationId: revokeUserPermission
       parameters:
         - name: pretty
@@ -1274,7 +1332,7 @@ paths:
     post:
       tags:
         - user
-      description: Check whether a user has been assigned any of the roles specified in the request body.
+      description: Check whether a user in a tenant has been assigned any of the roles specified in the request body.
       operationId: hasRoleAny
       parameters:
         - name: pretty
@@ -1317,7 +1375,7 @@ paths:
     post:
       tags:
         - user
-      description: Check whether a user has been assigned all of the roles specified in the request body.
+      description: Check whether a user in a tenant has been assigned all of the roles specified in the request body.
       operationId: hasRoleAll
       parameters:
         - name: pretty
@@ -1497,6 +1555,10 @@ paths:
           required: true
           schema:
             type: string
+        - name: tenant
+          in: query
+          schema:
+            type: string
         - name: pretty
           in: query
           schema:
@@ -1538,7 +1600,7 @@ paths:
       tags:
         - user
       description: |-
-        Get all users assigned a permission.  The permSpec parameter is a permission specification that uses colons as separators, the asterisk as a wildcard character and commas to define lists.  Here are examples of permission specifications:
+        Get all users in a tenant assigned a permission.  The permSpec parameter is a permission specification that uses colons as separators, the asterisk as a wildcard character and commas to define lists.  Here are examples of permission specifications:
 
             system:mytenant:read:mysystem
             system:mytenant:*:mysystem
@@ -1554,6 +1616,10 @@ paths:
         - name: permSpec
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
           schema:
             type: string
         - name: pretty
@@ -1586,123 +1652,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespBasic'
-  '/security/vault/secret/delete/{secretType}/{secretName}':
-    post:
-      tags:
-        - vault
-      description: |
-        Soft delete one or more versions of a secret. Each version can be deleted individually or as part of a group specified in the input array. Deletion can be reversed using the *secret/undelete/{secretName}* endpoint, which make this a _soft_ deletion operation.
-
-        The input versions array is interpreted as follows:
-
-           * [-] - empty = delete all versions
-           * [0] - zero = delete only the latest version
-           * [1, 3, ...] - list = delete the specified versions
-
-        ### Naming Secrets
-        Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
-
-        A secret is assigned a path name constructed from the *secretType* and *secretName* path parameters and, optionally, from query parameters determined by the *secretType*. Each *secretType* determines a specific transformation from the url path to a path in the vault.  The *secretType* may require certain query parameters to be present on the request in order to construct the vault path.  See the next section for details.
-
-        ### Secret Types
-        The list below documents each *secretType* and their applicable query parameters. Highlighted parameter names indicate required parameters. When present, default values are listed first and also highlighted.
-
-          - **system**
-            - *sysid*: the unique system id
-            - *sysuser*: the accessing user (except when keytype=cert)
-            - keytype: *sshkey* | password | accesskey | cert
-          - **dbcred**
-            - *dbhost*:  the DBMS hostname, IP address or alias
-            - *dbname*:  the database name or alias
-            - *service*: service name
-          - **jwtsigning** - *no query parameters*
-          - **user** - *no query parameters*
-          - **service** - *no query parameters*
-      operationId: deleteSecret
-      parameters:
-        - name: secretType
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: secretName
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: pretty
-          in: query
-          schema:
-            type: boolean
-            default: false
-        - name: sysid
-          in: query
-          schema:
-            type: string
-        - name: sysuser
-          in: query
-          schema:
-            type: string
-        - name: keytype
-          in: query
-          schema:
-            type: string
-            default: sshkey
-        - name: dbhost
-          in: query
-          schema:
-            type: string
-        - name: dbname
-          in: query
-          schema:
-            type: string
-        - name: service
-          in: query
-          schema:
-            type: string
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ReqVersions'
-        required: true
-      responses:
-        '200':
-          description: Secret deleted.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RespVersions'
-        '400':
-          description: Input error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RespBasic'
-        '401':
-          description: Not authorized.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RespBasic'
-        '403':
-          description: Forbidden.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RespBasic'
-        '404':
-          description: Secret not found.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RespBasic'
-        '500':
-          description: Server error.
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/RespBasic'
   '/security/vault/secret/undelete/{secretType}/{secretName}':
     post:
       tags:
@@ -1715,6 +1664,8 @@ paths:
            * [-] - empty = undelete all versions
            * [0] - zero = undelete only the latest version
            * [1, 3, ...] - list = undelete the specified versions
+
+        A valid tenant and user must be specified in the body.
 
         ### Naming Secrets
         Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
@@ -1833,6 +1784,8 @@ paths:
            * [0] - zero = destroy only the latest version
            * [1, 3, ...] - list = destroy the specified versions
 
+        A valid tenant and user must be specified in the body.
+
         ### Naming Secrets
         Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
 
@@ -1944,6 +1897,8 @@ paths:
       description: |
         List a secret's metadata including its version information. The input parameter must be a secret name, not a folder. The result includes which version of the secret is the latest.
 
+        A valid tenant and user must be specified as query parameters.
+
         ### Naming Secrets
         Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
 
@@ -1973,6 +1928,14 @@ paths:
         - name: secretName
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
           schema:
             type: string
         - name: pretty
@@ -2045,6 +2008,8 @@ paths:
 
         The response object includes the map of zero or more key/value pairs and metadata that describes the secret. The metadata includes which version of the secret was returned.
 
+        A valid tenant and user must be specified as query parameters.
+
         ### Naming Secrets
         Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
 
@@ -2074,6 +2039,14 @@ paths:
         - name: secretName
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
           schema:
             type: string
         - name: version
@@ -2153,7 +2126,7 @@ paths:
       tags:
         - vault
       description: |
-        Create or update a secret. The JSON payload contains a required *data* object and an optional *options* object.
+        Create or update a secret. The JSON payload contains a required *data* object and an optional *options* object.  It also contains the required tenant and user fields.
 
         The *data* object is a JSON object that contains one or more key/value pairs in which both the key and value are strings. These are the individual secrets that are saved under the path name. The secrets are automatically versioned, which allows a pre-configured number of past secret values to be accessible even after new values are assigned. See the various GET operations for details on how to access different aspects of secrets.
 
@@ -2265,12 +2238,133 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespBasic'
+  '/security/vault/secret/delete/{secretType}/{secretName}':
+    post:
+      tags:
+        - vault
+      description: |
+        Soft delete one or more versions of a secret. Each version can be deleted individually or as part of a group specified in the input array. Deletion can be reversed using the *secret/undelete/{secretName}* endpoint, which make this a _soft_ deletion operation.
+
+        The input versions array is interpreted as follows:
+
+           * [-] - empty = delete all versions
+           * [0] - zero = delete only the latest version
+           * [1, 3, ...] - list = delete the specified versions
+
+        A valid tenant and user must also be specified in the body.
+
+        ### Naming Secrets
+        Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
+
+        A secret is assigned a path name constructed from the *secretType* and *secretName* path parameters and, optionally, from query parameters determined by the *secretType*. Each *secretType* determines a specific transformation from the url path to a path in the vault.  The *secretType* may require certain query parameters to be present on the request in order to construct the vault path.  See the next section for details.
+
+        ### Secret Types
+        The list below documents each *secretType* and their applicable query parameters. Highlighted parameter names indicate required parameters. When present, default values are listed first and also highlighted.
+
+          - **system**
+            - *sysid*: the unique system id
+            - *sysuser*: the accessing user (except when keytype=cert)
+            - keytype: *sshkey* | password | accesskey | cert
+          - **dbcred**
+            - *dbhost*:  the DBMS hostname, IP address or alias
+            - *dbname*:  the database name or alias
+            - *service*: service name
+          - **jwtsigning** - *no query parameters*
+          - **user** - *no query parameters*
+          - **service** - *no query parameters*
+      operationId: deleteSecret
+      parameters:
+        - name: secretType
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: secretName
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: pretty
+          in: query
+          schema:
+            type: boolean
+            default: false
+        - name: sysid
+          in: query
+          schema:
+            type: string
+        - name: sysuser
+          in: query
+          schema:
+            type: string
+        - name: keytype
+          in: query
+          schema:
+            type: string
+            default: sshkey
+        - name: dbhost
+          in: query
+          schema:
+            type: string
+        - name: dbname
+          in: query
+          schema:
+            type: string
+        - name: service
+          in: query
+          schema:
+            type: string
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ReqVersions'
+        required: true
+      responses:
+        '200':
+          description: Secret deleted.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespVersions'
+        '400':
+          description: Input error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespBasic'
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespBasic'
+        '403':
+          description: Forbidden.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespBasic'
+        '404':
+          description: Secret not found.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespBasic'
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RespBasic'
   '/security/vault/secret/list/meta/{secretType}':
     get:
       tags:
         - vault
       description: |
         List the secret names at the specified path. The path must represent a folder, not an actual secret name. If the path does not have a trailing slash one will be inserted. Secret names should not encode private information.
+
+        A valid tenant and user must be specified as query parameters.
 
         ### Naming Secrets
         Secrets can be arranged hierarchically by using the "+" characters in the secret name.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
@@ -2296,6 +2390,14 @@ paths:
         - name: secretType
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
           schema:
             type: string
         - name: pretty
@@ -2366,6 +2468,8 @@ paths:
       description: |
         Erase all traces of a secret: its key, all versions of its value and all its metadata. Specifying a folder erases all secrets in that folder.
 
+        A valid tenant and user must be specified as query parameters.
+
         ### Naming Secrets
         Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
 
@@ -2395,6 +2499,14 @@ paths:
         - name: secretName
           in: path
           required: true
+          schema:
+            type: string
+        - name: tenant
+          in: query
+          schema:
+            type: string
+        - name: user
+          in: query
           schema:
             type: string
         - name: pretty
@@ -2458,16 +2570,21 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/RespBasic'
-  '/security/vault/secret/validateServicePassword/{serviceName}':
+  '/security/vault/secret/validateServicePassword/{secretName}':
     post:
       tags:
         - vault
       description: |+
-        Validate a service's password. The JSON payload contains the password that needs to be validated against the password stored in the vault for the named service.
+        Validate a service's password. The JSON payload contains the password that needs to be validated against the password stored in the vault for the service specifiedin the X-Tapis-User header. The secret name is the path under whichthe password was stored.
+
+        A valid tenant and user must also be specified in the payload.
+
+        ### Naming Secrets
+        Secrets can be arranged hierarchically by using the "+" characters in the *secretName*.  These characters will be converted to slashes upon receipt, allowing secrets to be arranged in folders.
 
       operationId: validateServicePassword
       parameters:
-        - name: serviceName
+        - name: secretName
           in: path
           required: true
           schema:
@@ -2546,6 +2663,10 @@ components:
     ReqCreateRole:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         roleName:
           type: string
         description:
@@ -2635,16 +2756,28 @@ components:
     ReqUpdateRoleName:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         newRoleName:
           type: string
     ReqUpdateRoleDescription:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         description:
           type: string
     ReqAddRolePermission:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         roleName:
           type: string
         permSpec:
@@ -2652,6 +2785,10 @@ components:
     ReqRemoveRolePermission:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         roleName:
           type: string
         permSpec:
@@ -2659,6 +2796,10 @@ components:
     ReqAddChildRole:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         parentRoleName:
           type: string
         childRoleName:
@@ -2666,6 +2807,10 @@ components:
     ReqRemoveChildRole:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         parentRoleName:
           type: string
         childRoleName:
@@ -2696,6 +2841,10 @@ components:
     ReqPreviewPathPrefix:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         schema:
           type: string
         roleName:
@@ -2711,6 +2860,10 @@ components:
     ReqReplacePathPrefix:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         schema:
           type: string
         roleName:
@@ -2742,6 +2895,8 @@ components:
     ReqUserHasRole:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         roleName:
@@ -2749,6 +2904,8 @@ components:
     ReqGrantUserRole:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         roleName:
@@ -2756,6 +2913,8 @@ components:
     ReqRevokeUserRole:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         roleName:
@@ -2763,6 +2922,8 @@ components:
     ReqGrantUserPermission:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         permSpec:
@@ -2770,6 +2931,8 @@ components:
     ReqGrantUserRoleWithPermission:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         roleName:
@@ -2779,6 +2942,8 @@ components:
     ReqRevokeUserPermission:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         permSpec:
@@ -2786,6 +2951,8 @@ components:
     ReqUserHasRoleMulti:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         roleNames:
@@ -2795,6 +2962,8 @@ components:
     ReqUserIsPermitted:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         permSpec:
@@ -2802,6 +2971,8 @@ components:
     ReqUserIsPermittedMulti:
       type: object
       properties:
+        tenant:
+          type: string
         user:
           type: string
         permSpecs:
@@ -2825,6 +2996,10 @@ components:
     ReqVersions:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         versions:
           type: array
           items:
@@ -2925,6 +3100,10 @@ components:
     ReqWriteSecret:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         options:
           $ref: '#/components/schemas/Options'
         data:
@@ -2954,6 +3133,10 @@ components:
     ReqValidateServicePwd:
       type: object
       properties:
+        tenant:
+          type: string
+        user:
+          type: string
         password:
           type: string
   securitySchemes:
