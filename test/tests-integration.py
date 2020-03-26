@@ -232,6 +232,18 @@ def test_delete_role(client):
     assert result.changes == 1
 
 
+# --------------------
+# Debug flag tests -
+# --------------------
+
+def test_debug_flag_tenants(client):
+    result, debug = client.tenants.list_tenants(_tapis_debug=True)
+    assert hasattr(debug, 'request')
+    assert hasattr(debug, 'response')
+    assert hasattr(debug.request, 'url')
+    assert hasattr(debug.response, 'content')
+
+
 # ---------------------
 # Metadata tests -
 # ---------------------
