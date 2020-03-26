@@ -22,8 +22,8 @@ t.tokens...
 Create a client pointing to the develop environment.
 
 ```bash
-
-t = DynaTapy(base_url='https://dev.develop.tapis.io', username='tenants', account_type='service', tenant_id='dev')
+from tapy.dyna import DynaTapy
+t = DynaTapy(base_url='https://dev.develop.tapis.io', username='tenants', account_type='service', tenant_id='master')
 t.get_tokens()
 t.access_token.expires_at                                                                           
 Out[*]: '2019-11-12 16:57:48.982899'

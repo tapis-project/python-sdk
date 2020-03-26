@@ -1,4 +1,4 @@
 {
   "service_name": "pysdk-tests",
-  "tenants": ["dev"]
+  "tenants": ["master"]
 }
