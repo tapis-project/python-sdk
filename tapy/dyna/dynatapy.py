@@ -300,6 +300,14 @@ class Operation(object):
             s = '{' + f'{param.name}' + '}'
             url = url.replace(s, p_val)
 
+        # check for the _tapis_debug flag for generating debug data
+        debug = False
+        if '_tapis_debug' in kwargs:
+            debug = kwargs.get('_tapis_debug', False)
+            # ignore non-boolean values for the debug flag and set it to False.
+            if not type(debug) == bool:
+                debug = False
+
         # construct the http query parameters -
         params = {}
         for param in self.query_parameters:
@@ -397,6 +405,8 @@ class Operation(object):
         if resp.status_code >= 300:
             raise tapy.errors.BaseTapyException(msg=error_msg, version=version, request=r, response=resp)
 
+        # generate the debug_data object
+        debug_data = Debug(request=r, response=resp)
         # get the result's operation ids from the custom x-response-operation-ids for this operation id.from
         # results_operation_ids = [...]
         # resp.headers is a case-insensitive dict, but the v
@@ -408,6 +418,8 @@ class Operation(object):
                 msg = f'Requests could not produce JSON from the response even though the content-type was ' \
                       f'application/json. Exception: {e}'
                 #raise tapy.errors.InvalidServerResponseError(msg=error_msg, version=version, request=r, response=resp)
+                if debug:
+                    return resp.content, debug_data
                 return resp.content
             # get the Tapis result objectm which could be a JSON object or list.
             try:
@@ -420,22 +432,32 @@ class Operation(object):
                 # if it is a list we should return a list of TapisResult objects:
                 if _seq_but_not_str(result):
                     if len([item for item in result if type(item) in TapisResult.PRIMITIVE_TYPES]) > 0:
+                        if debug:
+                            return TapisResult(result), debug_data
                         return TapisResult(result)
                     else:
+                        if debug:
+                            return [TapisResult(**x) for x in result], debug_data
                         return [TapisResult(**x) for x in result]
                 # otherwise, assume it is a JSON object and return that directly as a result -
                 try:
+                    if debug:
+                        return TapisResult(**result), debug_data
                     return TapisResult(**result)
                 except Exception as e:
                     msg = f'Failed to serialize the result object. Got exception: {e}'
                     raise tapy.errors.InvalidServerResponseError(msg=msg, version=version, request=r, response=resp)
             else:
                 # the response was JSON but not the standard Tapis 4 stanzas, so just return the JSON content:
+                if debug:
+                    return json_content, debug_data
                 return json_content
 
         # todo - note:
         # For now, we do not try to handle other content-types, such as application/xml, etc. We just return
         # the raw content as the result.
+        if debug:
+            return resp.content, debug_data
         return resp.content
 
 
@@ -486,3 +508,11 @@ class TapisResult(object):
     def __repr__(self):
         return str(self)
 
+
+class Debug(object):
+    """
+    Debug data for an API request.
+    """
+    def __init__(self, request, response):
+        self.request = request
+        self.response = response
