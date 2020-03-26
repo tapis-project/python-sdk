@@ -13,7 +13,7 @@ def client():
     base_url = getattr(conf, 'base_url', 'https://dev.develop.tapis.io')
     username = getattr(conf, 'username', 'pysdk')
     account_type = getattr(conf, 'account_type', 'service')
-    tenant_id = getattr(conf, 'tenant_id', 'dev')
+    tenant_id = getattr(conf, 'tenant_id', 'master')
     t = DynaTapy(base_url=base_url, username=username, account_type=account_type, tenant_id=tenant_id)
     t.get_tokens()
     return t
@@ -154,7 +154,7 @@ def test_get_tenant_by_id(client):
     assert t.base_url == 'https://dev.develop.tapis.io'
     assert t.tenant_id == 'dev'
     assert t.public_key.startswith('-----BEGIN PUBLIC KEY-----')
-    assert t.is_owned_by_associate_site == True
+    assert t.is_owned_by_associate_site == False
     assert t.token_service == 'https://dev.develop.tapis.io/v3/tokens'
     assert t.security_kernel == 'https://dev.develop.tapis.io/v3/security'
 
@@ -166,10 +166,10 @@ def test_list_owners(client):
         assert hasattr(o, 'last_update_time')
         assert hasattr(o, 'name')
 
-def test_get_owners(client):
-    owner = client.tenants.get_owner(email='jstubbs@tacc.utexas.edu')
-    assert owner.email == 'jstubbs@tacc.utexas.edu'
-    assert owner.name == 'Joe Stubbs'
+def test_get_owner(client):
+    owner = client.tenants.get_owner(email='CICSupport@tacc.utexas.edu')
+    assert owner.email == 'CICSupport@tacc.utexas.edu'
+    assert owner.name == 'CIC Support'
 
 
 # ---------------------
@@ -177,7 +177,7 @@ def test_get_owners(client):
 # ---------------------
 
 def test_list_roles(client):
-    roles = client.sk.getRoleNames()
+    roles = client.sk.getRoleNames(tenant='master')
     assert hasattr(roles, 'names')
     assert type(roles.names) == list
     if len(roles.names) > 0:
@@ -186,47 +186,48 @@ def test_list_roles(client):
 def test_create_role(client):
     # first, make sure role is not there -
     try:
-        client.sk.deleteRoleByName(roleName='pysdk_test_role')
+        client.sk.deleteRoleByName(tenant='master', roleName='pysdk_test_role', user='tenants')
     except:
         pass
     # create the test role -
-    role = client.sk.createRole(roleName='pysdk_test_role', description='test role created by pysdk')
+    role = client.sk.createRole(tenant='master', roleName='pysdk_test_role',
+                                description='test role created by pysdk', user='tenants')
     assert hasattr(role, 'url')
 
 def test_role_user_list_initially_empty(client):
-    users = client.sk.getUsersWithRole(roleName='pysdk_test_role')
+    users = client.sk.getUsersWithRole(tenant='master', roleName='pysdk_test_role')
     assert users.names == []
 
 def test_add_user_to_role(client):
-    result = client.sk.grantRole(roleName='pysdk_test_role', user='tenants')
+    result = client.sk.grantRole(tenant='master', roleName='pysdk_test_role', user='tenants')
     assert hasattr(result, 'changes')
     assert result.changes == 1
 
 def test_user_has_role(client):
-    roles = client.sk.getUserRoles(user='tenants')
+    roles = client.sk.getUserRoles(tenant='master', user='tenants')
     assert hasattr(roles, 'names')
     assert type(roles.names) == list
     assert 'pysdk_test_role' in roles.names
 
 def test_user_in_role_user_list(client):
-    users = client.sk.getUsersWithRole(roleName='pysdk_test_role')
+    users = client.sk.getUsersWithRole(tenant='master', roleName='pysdk_test_role')
     assert hasattr(users, 'names')
     assert type(users.names) == list
     assert 'tenants' in users.names
 
 def test_revoke_user_from_role(client):
-    result = client.sk.revokeUserRole(roleName='pysdk_test_role', user='tenants')
+    result = client.sk.revokeUserRole(tenant='master', roleName='pysdk_test_role', user='tenants')
     assert hasattr(result, 'changes')
     assert result.changes == 1
 
 def test_user_no_longer_in_role(client):
-    roles = client.sk.getUserRoles(user='tenants')
+    roles = client.sk.getUserRoles(tenant='master', user='tenants')
     assert hasattr(roles, 'names')
     assert type(roles.names) == list
     assert 'tenants' not in roles.names
 
 def test_delete_role(client):
-    result = client.sk.deleteRoleByName(roleName='pysdk_test_role')
+    result = client.sk.deleteRoleByName(tenant='master', roleName='pysdk_test_role', user='tenants')
     assert hasattr(result, 'changes')
     assert result.changes == 1
 
