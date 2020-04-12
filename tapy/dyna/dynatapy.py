@@ -253,8 +253,9 @@ class DynaTapy(object):
         if not self.refresh_token:
             raise tapy.errors.TapyClientConfigurationError(msg="No refresh token found.")
         if self.account_type == 'service':
-            return self.refesh_service_tokens()
-        return self.refresh_user_tokens()
+            return self.refresh_service_tokens()
+        else:
+            return self.refresh_user_tokens()
 
     def refresh_user_tokens(self):
         """
@@ -275,7 +276,9 @@ class DynaTapy(object):
         """
         Use the refresh token operation for tokens of type "service".
         """
-        pass
+        tokens = self.tokens.refresh_token(refresh_token=self.refresh_token.refresh_token)
+        self.set_access_token(tokens.access_token)
+        self.set_refresh_token(tokens.refresh_token)
 
     def set_refresh_token(self, token):
         """
