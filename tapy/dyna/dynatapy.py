@@ -1,3 +1,4 @@
+from base64 import b64encode
 from collections.abc import Sequence
 import datetime
 import json
@@ -18,6 +19,7 @@ def _seq_but_not_str(obj):
 
 
 RESOURCES = ['actors',
+             'authenticator',
              'meta',
              #'files', ## currently the files spec is missing operationId's for some of its operations.
              'sk',
@@ -40,8 +42,16 @@ def _getspec(resource_name):
         print(f"Got exception trying to load spec_path: {spec_path}; exception: {e}")
         raise e
 
-
 RESOURCE_SPECS = {resource: _getspec(resource) for resource in RESOURCES}
+
+
+def get_basic_auth_header(username, password):
+    """
+    Convenience function with will return a properly formatted Authorization header from a username and password.
+    """
+    user_pass = bytes(f"{username}:{password}", 'utf-8')
+    return 'Basic {}'.format(b64encode(user_pass).decode())
+
 
 class DynaTapy(object):
     """
@@ -51,6 +61,7 @@ class DynaTapy(object):
     def __init__(self,
                  base_url=None,
                  username=None,
+                 password=None,
                  tenant_id=None,
                  account_type=None,
                  access_token=None,
@@ -59,7 +70,9 @@ class DynaTapy(object):
                  x_tenant_id=None,
                  x_username=None,
                  verify=True,
-                 service_password=None
+                 service_password=None,
+                 client_id=None,
+                 client_key=None
                  ):
         # the base_url for the server this Tapis client should interact with
         self.base_url = base_url
@@ -67,11 +80,16 @@ class DynaTapy(object):
         # the username associated with this Tapis client
         self.username = username
 
+        # the password associated with a user account; use service_password for service accounts.
+        self.password = password
+
         # the tenant id associated with this Tapis client
         self.tenant_id = tenant_id
 
         # the account_type ("user" or "service") associated with this Tapis client
         self.account_type = account_type
+        if not self.account_type:
+            self.account_type = 'user'
 
         # the access token to use -- should be an honest TapisResult access token.
         self.access_token = access_token
@@ -82,10 +100,38 @@ class DynaTapy(object):
         # pass in a "raw" JWT directly. This is only used if the access_token is not set.
         self.jwt = jwt
 
+        # whether to verify the TLS certificate at the base_url
+        self.verify = verify
+
+        # the service password, for service accounts to retrieve a token with.
+        self.service_password = service_password
+
+        # the client id of an OAuth2 client to use for generating tokens
+        self.client_id = client_id
+
+        # the client key of an OAuth2 client to use for generating tokens
+        self.client_key = client_key
+
+        # the requests.Session object this client will use to prepare requests
+        self.requests_session = requests.Session()
+
         # use the following two parameters to set headers to make requests on behalf of a different
         # tenant_id and username.
         self.x_tenant_id = x_tenant_id
         self.x_username = x_username
+
+        # create resources for each API defined above. In the future we could make this more dynamic in multiple ways.
+        for resource_name, spec in RESOURCE_SPECS.items():
+            # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
+            setattr(self, resource_name, Resource(resource_name, spec.paths, self))
+
+        # if the user passed just base_url, try to get the list of tenants and derive the tenant_id from it.
+        if base_url and not tenant_id:
+                tenants = self.tenants.list_tenants()
+                for t in tenants:
+                    if t.base_url == base_url:
+                        self.tenant_id = t.tenant_id
+
         # it the caller did not explicitly set the x_tenant_id and x_username headers, and this is a service token
         # set them for the caller.
         if not self.x_tenant_id and not self.x_username:
@@ -93,29 +139,66 @@ class DynaTapy(object):
                 self.x_tenant_id = self.tenant_id
                 self.x_username = self.username
 
-        # whether to verify the TLS certificate at the base_url
-        self.verify = verify
-
-        # the service password, for service accounts to retrieve a token with.
-        self.service_password = service_password
-
-        # the requests.Session object this client will use to prepare requests
-        self.requests_session = requests.Session()
-
-        # create resources for each API defined above. In the future we could make this more dynamic in multiple ways.
-        for resource_name, spec in RESOURCE_SPECS.items():
-            # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
-            setattr(self, resource_name, Resource(resource_name, spec.paths, self))
-
     def get_tokens(self, **kwargs):
         """
-        Calls the Tapis Tokens API to get access and refresh tokens and set them on the client.
+        Convenience wrapper to get either service tokens (tokengen Tokens API) or user tokens (Authenticator/OAuth2 API)
+        based on the account_type on this client instance.
+        """
+        if self.account_type == 'service':
+            return self.get_service_tokens(**kwargs)
+        return self.get_user_tokens(**kwargs)
+
+
+    def get_user_tokens(self, **kwargs):
+        """
+        Calls the Tapis authenticator to get user tokens based on username and password.
+        """
+        if not 'username' in kwargs:
+            username = self.username
+        else:
+            username = kwargs['username']
+        if not 'password' in kwargs:
+            password = self.password
+        else:
+            password = kwargs['password']
+        if not 'client_id' in kwargs:
+            client_id = self.client_id
+        else:
+            client_id = kwargs['client_id']
+        if not 'client_key' in kwargs:
+            client_key = self.client_key
+        else:
+            client_key = kwargs['client_key']
+        if client_id and client_key:
+            auth_header = {'Authorization': get_basic_auth_header(client_id, client_key)}
+        else:
+            auth_header = {}
+        if 'headers' in kwargs:
+            auth_header.update(kwargs['headers'])
+        tokens = self.authenticator.create_token(username=username,
+                                                 password=password,
+                                                 grant_type='password',
+                                                 headers=auth_header)
+        self.set_access_token(tokens.access_token)
+        self.refresh_token = None
+        #
+        if hasattr(tokens, 'refresh_token'):
+            self.set_refresh_token(tokens.refresh_token)
+
+
+    def get_service_tokens(self, **kwargs):
+        """
+        Calls the Tapis Tokens API (tokengen) to get access and refresh tokens for a service and set them on the client.
         :return: 
         """
         if not 'username' in kwargs:
             username = self.username
+        else:
+            username = kwargs['username']
         if not 'tenant_id' in kwargs:
             tenant_id = self.tenant_id
+        else:
+            tenant_id = kwargs['tenant_id']
         if not 'access_token_ttl' in kwargs:
             # default to a 24 hour access token -
             access_token_ttl = 86400
@@ -163,6 +246,39 @@ class DynaTapy(object):
         except:
             pass
 
+    def refresh_tokens(self):
+        """
+        Use the refresh token on this client to get a new access and refresh token pair.
+        """
+        if not self.refresh_token:
+            raise tapy.errors.TapyClientConfigurationError(msg="No refresh token found.")
+        if self.account_type == 'service':
+            return self.refresh_service_tokens()
+        else:
+            return self.refresh_user_tokens()
+
+    def refresh_user_tokens(self):
+        """
+        Use the refresh token operation for tokens of type "user".
+        """
+        if not self.client_id:
+            raise tapy.errors.TapyClientConfigurationError(msg="client_id not configure.")
+        if not self.client_key:
+            raise tapy.errors.TapyClientConfigurationError(msg="client_key not configure.")
+        auth_header = {'Authorization': get_basic_auth_header(self.client_id, self.client_key)}
+        tokens = self.authenticator.create_token(grant_type='refresh_token',
+                                                 refresh_token=self.refresh_token.refresh_token,
+                                                 headers=auth_header)
+        self.set_access_token(tokens.access_token)
+        self.set_refresh_token(tokens.refresh_token)
+
+    def refresh_service_tokens(self):
+        """
+        Use the refresh token operation for tokens of type "service".
+        """
+        tokens = self.tokens.refresh_token(refresh_token=self.refresh_token.refresh_token)
+        self.set_access_token(tokens.access_token)
+        self.set_refresh_token(tokens.refresh_token)
 
     def set_refresh_token(self, token):
         """
@@ -170,7 +286,21 @@ class DynaTapy(object):
         :param token: (TapisResult) A TapisResult object returned using the t.tokens.create_token() method.
         :return:
         """
+        def _expires_in():
+            return self.refresh_token.expires_at - datetime.datetime.now(datetime.timezone.utc)
+
         self.refresh_token = token
+        # avoid circular imports by nesting this import here - the common.auth module has to import dynatapy at
+        # initialization to make create service clients.
+        try:
+            from common.auth import validate_token
+            self.refresh_token.claims = validate_token(self.refresh_token.refresh_token)
+            self.refresh_token.original_ttl = self.refresh_token.expires_in
+            self.refresh_token.expires_in = _expires_in
+            self.refresh_token.expires_at = datetime.datetime.fromtimestamp(self.refresh_token.claims['exp'],
+                                                                            datetime.timezone.utc)
+        except:
+            pass
 
     def set_jwt(self, jwt):
         """
@@ -374,8 +504,10 @@ class Operation(object):
 
         # the create_token operation requires HTTP basic auth -
         if self.resource_name == 'tokens' and self.operation_id == 'create_token':
+            # contruct the requests HTTPBasicAuth header object
             basic_auth_header = requests.auth.HTTPBasicAuth(self.tapis_client.username,
                                                             self.tapis_client.service_password)
+            # set the object on the request
             basic_auth_header(r)
 
         # make the request and return the response object -
@@ -409,7 +541,7 @@ class Operation(object):
         debug_data = Debug(request=r, response=resp)
         # get the result's operation ids from the custom x-response-operation-ids for this operation id.from
         # results_operation_ids = [...]
-        # resp.headers is a case-insensitive dict, but the v
+        # resp.headers is a case-insensitive dict
         resp_content_type = resp.headers.get('content-type')
         if hasattr(resp_content_type, 'lower') and resp_content_type.lower() == 'application/json':
             try:
@@ -417,17 +549,18 @@ class Operation(object):
             except Exception as e:
                 msg = f'Requests could not produce JSON from the response even though the content-type was ' \
                       f'application/json. Exception: {e}'
-                #raise tapy.errors.InvalidServerResponseError(msg=error_msg, version=version, request=r, response=resp)
+                # TODO -- should this not be an error if the API has described the content-type as application/json?
+                #         what valid use cases do we still have for passing raw content in this case?
                 if debug:
                     return resp.content, debug_data
                 return resp.content
-            # get the Tapis result objectm which could be a JSON object or list.
+            # get the Tapis result object which could be a JSON object or list.
             try:
                 result = json_content.get('result')
             except Exception as e:
-                msg =  f'Request did not produce json response'
+                # some Tapis APIs, such as the Meta API, do not return "result" objects and/or do not return the
+                # standard Tapis stanzas but rather "raw" JSON documents
                 return resp.content
-                # handle responses that do not have the standard Tapis stanzas.
             if result:
                 # if it is a list we should return a list of TapisResult objects:
                 if _seq_but_not_str(result):

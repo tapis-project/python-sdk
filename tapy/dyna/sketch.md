@@ -19,11 +19,19 @@ t.tokens...
 
 ## Interact with the Develop Instance
 
-Create a client pointing to the develop environment.
+Create a client for a user account in the dev tenant of the develop environment:
+```
+from tapy.dyna import DynaTapy 
+t = DynaTapy(base_url='https://dev.develop.tapis.io', username='testuser1', password='testuser1') 
+
+```
+
+
+Create a client for a service to the develop environment.
 
 ```bash
 from tapy.dyna import DynaTapy
-t = DynaTapy(base_url='https://dev.develop.tapis.io', username='tenants', account_type='service', tenant_id='master')
+t = DynaTapy(base_url='https://master.develop.tapis.io', username='tenants', account_type='service', tenant_id='master')
 t.get_tokens()
 t.access_token.expires_at                                                                           
 Out[*]: '2019-11-12 16:57:48.982899'
