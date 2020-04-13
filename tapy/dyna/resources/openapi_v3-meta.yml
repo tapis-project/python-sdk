@@ -1,5 +1,5 @@
 openapi: 3.0.1
-# updated 2.19.2020
+# updated 4.12.2020
 info:
   title: "Tapis Meta V3 API"
   description: "The Tapis Meta API provides access to a MongoDB databas. A standalone service which connects to a MongoDB database and immediately exposes all of MongoDB’s capabilities through a complete REST API, which allows the user to read and write JSON messages and binary data via HTTP."
@@ -30,10 +30,10 @@ tags:
     description: The documents hosted in a collection.
 
 paths:
-  /v3/meta/:
+  /meta/:
     get:
       tags:
-      - root
+        - root
       summary: listDBNames
       description: List the names of all Dbs available.
       operationId: listDBNames
@@ -54,7 +54,7 @@ paths:
                   type: string
         '401':
           description: Not authorized.
-  /v3/meta/{db}:
+  /meta/{db}:
     get:
       tags:
         - db
@@ -94,7 +94,7 @@ paths:
               schema:
                 type: object
       deprecated: false
-    put:
+    put:  # todo
       tags:
         - db
       summary: createDB
@@ -127,7 +127,7 @@ paths:
               schema:
                 type: object
       deprecated: false
-    delete:
+    delete:  # todo
       tags:
         - db
       summary: deleteDB
@@ -166,7 +166,87 @@ paths:
               schema:
                 type: object
       deprecated: false
-  /v3/meta/{db}/{collection}:
+
+  /meta/{db}/_meta:
+    get:
+      tags:
+        - db
+      summary: getDBMetadata
+      description: Get the Metadata for the database.
+      operationId: getDBMetadata
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: np
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of collection names returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+
+  /meta/{db}/{collection}:
+    put:
+      tags:
+        - collection
+      summary: createCollection
+      description: Create a new collection in the database.
+      operationId: createCollection
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: np
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '201':
+          description: List of collection names returned.
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
     get:
       tags:
         - collection
@@ -226,48 +306,6 @@ paths:
               schema:
                 type: object
       deprecated: false
-    put:
-      tags:
-        - collection
-      summary: createCollection
-      description: Create a new collection in the database.
-      operationId: createCollection
-      parameters:
-        - name: db
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: collection
-          in: path
-          required: true
-          schema:
-            type: string
-        - name: np
-          in: query
-          schema:
-            type: boolean
-            default: false
-      responses:
-        '201':
-          description: List of collection names returned.
-          content:
-            text/plain:
-              schema:
-                type: string
-        '401':
-          description: Not authorized.
-          content:
-            application/json:
-              schema:
-                type: object
-        '500':
-          description: Server error.
-          content:
-            text/plain:
-              schema:
-                type: string
-      deprecated: false
     post:
       tags:
         - document
@@ -292,7 +330,6 @@ paths:
             default: false
       requestBody:
         description: "the json document being added to the collection"
-        required: false
         content:
           application/json:
             schema:
@@ -317,7 +354,265 @@ paths:
               schema:
                 type: object
       deprecated: false
-  /v3/meta/{db}/{collection}/{docId}:
+    delete:
+      tags:
+        - collection
+      summary: deleteCollection
+      description: Delete a collection in the database.
+      operationId: deleteCollection
+      parameters:
+        - in: header
+          required: false
+          name: If-Match
+          schema:
+            type: string
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: np
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '201':
+          description: List of collection names returned.
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+
+  /meta/{db}/{collection}/_size:
+    get:
+      tags:
+        - collection
+      summary: getCollectionSize
+      description: Get the size of the collection.
+      operationId: getCollectionSize
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: np
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: Number of documents in collection.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+
+  /meta/{db}/{collection}/_meta:
+    get:
+      tags:
+        - collection
+      summary: getCollectionMetadata
+      description: Get the Metadata for the collection.
+      operationId: getCollectionMetadata
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: np
+          in: query
+          schema:
+            type: boolean
+            default: false
+      responses:
+        '200':
+          description: List of collection names returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+
+  /meta/{db}/{collection}/_indexes/{indexName}:
+    get:
+      tags:
+        - index
+      summary: listIndexes
+      description: List all indexes in the collection.
+      operationId: listIndexes
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: indexName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: List of indexes returned.
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: object
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+    put:
+      tags:
+        - index
+      summary: createIndex
+      description: Create an index on collection in the database.
+      operationId: createIndex
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: indexName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '201':
+          description: List of collection names returned.
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+    delete:
+      tags:
+        - index
+      summary: deleteIndex
+      description: Delete an index on the collection.
+      operationId: deleteIndex
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: indexName
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        '204':
+          description: Deleted index from the collection.
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+
+  /meta/{db}/{collection}/{docId}:
     get:
       tags:
         - document
@@ -368,9 +663,9 @@ paths:
     put:
       tags:
         - document
-      summary: updateDocument
+      summary: replaceDocument
       description: Update a document in the collection with the id.
-      operationId: updateDocument
+      operationId: replaceDocument
       parameters:
         - name: db
           in: path
@@ -392,9 +687,64 @@ paths:
           schema:
             type: boolean
             default: false
+      requestBody:
+        description: "the json document being added to the collection"
+        content:
+          application/json:
+            schema:
+              type: object
       responses:
         '201':
           description: Document upserted.
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                type: object
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                type: object
+      deprecated: false
+    patch:
+      tags:
+        - document
+      summary: modifyDocument
+      description: Modify a document in the collection with the id.
+      operationId: modifyDocument
+      parameters:
+        - name: db
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: collection
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: docId
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: np
+          in: query
+          schema:
+            type: boolean
+            default: false
+      requestBody:
+        description: "the json document being added to the collection"
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: Document modified.
         '401':
           description: Not authorized.
           content:
@@ -451,6 +801,8 @@ paths:
               schema:
                 type: object
       deprecated: false
+
+
 
 components:
   securitySchemes:
