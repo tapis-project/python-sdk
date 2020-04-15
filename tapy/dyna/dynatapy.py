@@ -18,20 +18,37 @@ def _seq_but_not_str(obj):
     return isinstance(obj, Sequence) and not isinstance(obj, (str, bytes, bytearray))
 
 
-RESOURCES = ['actors',
-             'authenticator',
-             'meta',
-             #'files', ## currently the files spec is missing operationId's for some of its operations.
-             'sk',
-             'tenants',
-             'tokens',]
+RESOURCES = [('actors', 'https://raw.githubusercontent.com/TACC/abaco/master/docs/specs/openapi_v3.yml'),
+             ('authenticator', 'https://raw.githubusercontent.com/tapis-project/authenticator/dev/service/resources/openapi_v3.yml'),
+             ('meta','https://raw.githubusercontent.com/tapis-project/tapis-client-java/master/meta-client/src/main/resources/metav3-openapi.yaml'),
+             ('files', 'https://raw.githubusercontent.com/tapis-project/tapis-files/master/api/src/main/resources/openapi.yaml'),  ## currently the files spec is missing operationId's for some of its operations.
+             ('sk', 'https://raw.githubusercontent.com/tapis-project/tapis-client-java/master/security-client/src/main/resources/SKAuthorizationAPI.yaml'),
+             ('streams', 'https://raw.githubusercontent.com/tapis-project/streams-api/dev/service/resources/openapi_v3.yml'),
+             ('systems', 'https://raw.githubusercontent.com/tapis-project/tapis-client-java/master/systems-client/SystemsAPI.yaml'),
+             ('tenants', 'https://raw.githubusercontent.com/tapis-project/tenants-api/master/service/resources/openapi_v3.yml'),
+             ('tokens','https://raw.githubusercontent.com/tapis-project/tokens-api/master/service/resources/openapi_v3.yml'),]
 
-def _getspec(resource_name):
+def _getspec(resource_name, resource_url, download_spec=False):
     """
     Returns the openapi spec
     :param resource_name: (str) the name of the resource.
+    :param resource_url: (str) URL to download the resource spec file.
     :return: (openapi_core.schema.specs.models.Spec) The Spec object associated with this resource.
     """
+    if download_spec:
+        try:
+            response = requests.get(resource_url)
+            if response.status_code == 200:
+               try:
+                   spec_dict = yaml.load(response.content)
+                   return create_spec(spec_dict)
+        # for now, if there are errors trying to fetch the latest spec, we fall back to the spec files defined in the
+        # the python-sdk package;
+               except:
+                   pass
+        except:
+            pass
+
     try:
         # for now, hardcode the paths; we could look these up based on a canonical URL once that is
         # established.
@@ -42,7 +59,7 @@ def _getspec(resource_name):
         print(f"Got exception trying to load spec_path: {spec_path}; exception: {e}")
         raise e
 
-RESOURCE_SPECS = {resource: _getspec(resource) for resource in RESOURCES}
+RESOURCE_SPECS = {resource[0]: _getspec(resource[0], resource[1]) for resource in RESOURCES}
 
 
 def get_basic_auth_header(username, password):
@@ -72,7 +89,8 @@ class DynaTapy(object):
                  verify=True,
                  service_password=None,
                  client_id=None,
-                 client_key=None
+                 client_key=None,
+                 download_latest_specs=False
                  ):
         # the base_url for the server this Tapis client should interact with
         self.base_url = base_url
@@ -120,8 +138,19 @@ class DynaTapy(object):
         self.x_tenant_id = x_tenant_id
         self.x_username = x_username
 
+        # whether to dowload the very latest OpenAPI v3 definition files for the services -- setting this to True
+        # could result in "live updates" to your code without warning. It also adds significant overhead to this method.
+        # Use at your own risk!
+        self.download_latest_specs = download_latest_specs
+
+        if self.download_latest_specs:
+            resource_specs = {resource[0]: _getspec(resource[0], resource[1], download_spec=True)
+                              for resource in RESOURCES}
+        else:
+            resource_specs= RESOURCE_SPECS
+
         # create resources for each API defined above. In the future we could make this more dynamic in multiple ways.
-        for resource_name, spec in RESOURCE_SPECS.items():
+        for resource_name, spec in resource_specs.items():
             # each API is a top-level attribute on the DynaTapy object, a Resource object constructed as follows:
             setattr(self, resource_name, Resource(resource_name, spec.paths, self))
 
