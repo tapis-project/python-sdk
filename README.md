@@ -15,6 +15,11 @@ TODO - setup on pypi, e.g.,
 pip install tapylib
 ```
 
+## Running the tests
+The tests resources are contained within the `test` directory in this repository.  
+1. Build the test docker image: `docker build -t tapis/pysdk-tests -f Dockerfile-tests .`
+2. Run these tests using the built docker image: `docker run -it --rm  tapis/pysdk-tests`
+
 ## Usage
 
 TODO - provide working examples, e.g., 
