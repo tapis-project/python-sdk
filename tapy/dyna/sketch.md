@@ -2,20 +2,10 @@
 
 # Usage
 
-The following examples illustrate the use of `DynaTapy`. They assume
-the tenants and tokens APIs have been started using the dev stack in
-the `test` directory.
+The following examples illustrate the use of `DynaTapy`, a "dynamically" generated Python
+client for the Tapis v3 API. For information on the architecutre and technical approach this
+project takes, see the architecture.md document.  
 
-```bash
-
-from tapy.dyna import DynaTapy
-t = DynaTapy(base_url='http://nginx')
-
-# inspect the resources and the operations -
-t.tenants...
-
-t.tokens...
-```
 
 ## Interact with the Develop Instance
 
@@ -23,9 +13,35 @@ Create a client for a user account in the dev tenant of the develop environment:
 ```
 from tapy.dyna import DynaTapy 
 t = DynaTapy(base_url='https://dev.develop.tapis.io', username='testuser1', password='testuser1') 
-
 ```
 
+Note that we are providing the username and password of a valid user account (`testuser`) 
+for the develop tenant. However, those fields were optional. We could have created the Tapis
+client without the username or the password with the plan to add them later, for example:
+```
+t = DynaTapy(base_url='https://dev.develop.tapis.io')
+
+# do some work, maybe prompt the user for their credentials or get them from a config...
+
+# set them once we are ready:
+t.username = username
+t.password = password
+```
+
+You won't be able to do much without credentials, but you will notice that the `tenant_id` attribute on the DynaTapy 
+client got set:
+```
+t = DynaTapy(base_url='https://dev.develop.tapis.io')
+t.tenant_id
+Out[*]: 'dev'
+```
+In v3, the Tenants API is a first-class service that maintains the registry of all tenants, and the 
+listing (GET endpoint) is available DynaTapy constructor used on
+
+
+In Tapis v3, you don't pass your password directly to each API; instead, you provide an access token. We use the testuser1 
+credentials to get an access token; technically this is part of the `oauth2` API, but we can use
+the `get_tokens()` convenience method. 
 
 Create a client for a service to the develop environment.
 
@@ -139,3 +155,58 @@ tenant = {'tenant_id': 'dev',
  }
  
  ```
+
+## A Survey of the Tapis v3 Services (Under Construction)
+In this section, we'll walk through some of the APIs available in the Tapis v3 develop environment. For what follows, 
+we will be making use of the following "user" client in the dev tenant:
+
+```
+from tapy.dyna import DynaTapy  
+t = DynaTapy(base_url='https://dev.develop.tapis.io', username='testuser1', password='testuser1')  
+```
+
+We can list systems and get a system by name:
+
+```
+t.systems.getSystemNames() 
+Out[*]: names: ['KDevSystem1', 'testFilesLs2']
+
+t.systems.getSystemByName(sysName='testFilesLs2')
+Out[*}:
+accessCredential: None
+bucketName: myBucket
+created: 2020-01-22T17:56:28.564234Z
+defaultAccessMethod: PASSWORD
+description: Default system for files ls test
+effectiveUserId: root
+enabled: True
+host: localhost
+id: 3
+jobCanExec: False
+. . .
+```
+
+We can create a new system from a JSON file description:
+```
+import json
+with open('resource_examples/system-example.json', 'r') as f:
+    system_description = json.loads(f.read())
+
+t.systems.createSystem(tSystem=system_description['tSystem'])
+```
+
+
+# Working with Tapis Services Running Locally 
+The following assumes the tenants and tokens APIs have been started using the dev stack in
+the `test` directory.
+
+```bash
+
+from tapy.dyna import DynaTapy
+t = DynaTapy(base_url='http://nginx')
+
+# inspect the resources and the operations -
+t.tenants...
+
+t.tokens...
+```
