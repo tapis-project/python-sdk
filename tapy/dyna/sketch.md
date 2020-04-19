@@ -15,7 +15,7 @@ from tapy.dyna import DynaTapy
 t = DynaTapy(base_url='https://dev.develop.tapis.io', username='testuser1', password='testuser1') 
 ```
 
-Note that we are providing the username and password of a valid user account (`testuser`) 
+Note that we are providing the username and password of a valid user account (`testuser1`) 
 for the develop tenant. However, those fields were optional. We could have created the Tapis
 client without the username or the password with the plan to add them later, for example:
 ```
@@ -36,12 +36,99 @@ t.tenant_id
 Out[*]: 'dev'
 ```
 In v3, the Tenants API is a first-class service that maintains the registry of all tenants, and the 
-listing (GET endpoint) is available DynaTapy constructor used on
+listing (GET endpoint) is available unauthenticated. The DynaTapy constructor retrieved the list of tenants
+to resolve the `tenant_id` from the `base_url` passed to the constructor.
 
+In Tapis v3, you don't pass your password directly to each API; instead, you provide an access token. We use the 
+`testuser1` credentials to get an access token; technically this is part of the `oauth2` API, but we can use
+the `get_tokens()` convenience method:
 
-In Tapis v3, you don't pass your password directly to each API; instead, you provide an access token. We use the testuser1 
-credentials to get an access token; technically this is part of the `oauth2` API, but we can use
-the `get_tokens()` convenience method. 
+```
+t.get_tokens() 
+```
+At this point we have an access token, which returned to the `get_tokens()` method and stored on the
+Tapis client, `t`. We can inspect the access token by simply printing it out:
+
+```
+type(t.access_token)
+Out[*]: tapy.dyna.dynatapy.TapisResult
+
+t.access_token
+Out[*]
+access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiJkODZiZDU2Zi05MTZiLTRhZTQtOTNmYy0wNTViOWE0MDM0MDIiLCJpc3MiOiJodHRwczovL2Rldi5kZXZlbG9wLnRhcGlzLmlvL3YzL3Rva2VuIiwic3ViIjoidGVzdHVzZXIxQGRldiIsInRhcGlzL3RlbmFudF9pZCI6ImRldiIsInRhcGlzL3Rva2VuX3R5cGUiOiJhY2Nlc3MiLCJ0YXBpcy9kZWxlZ2F0aW9uIjpmYWxzZSwidGFwaXMvZGVsZWdhdGlvbl9zdWIiOm51bGwsInRhcGlzL3VzZXJuYW1lIjoidGVzdHVzZXIxIiwidGFwaXMvYWNjb3VudF90eXBlIjoidXNlciIsImV4cCI6MTU4NzI4MDU3MSwidGFwaXMvY2xpZW50X2lkIjpudWxsLCJ0YXBpcy9ncmFudF90eXBlIjoicGFzc3dvcmQifQ.anfFshalxNd8-V1U3GEBnRH2puEV7xgRzRodxinlnuwIl5I7pbHr8tTCFQMSrGP8orq1qDhWRn57L0xsr99PkB36KBkFbO_yaVIoe2v-8hGF0KlYFSYL6mpoes46PFO1EJ9a-tOp9s2uRRlPG-kSTbjvpyf7El73qTi_kZmiRWsX8VJ2grAEFnr5ujt_bx7K3YU4rR6E5IaeTxCP7Qs0wFImJTBrvO41c7nr2PaigBk1UCJtzrv98G_y5Pi4rgpLiY_3cAO7JdI94l_SsMtms8NmkpVsM1jkrcEvvHT1cFzS3eQyqm0qlGR61qcdIYGUlbTMafty08E-vjkZo28a-w
+claims: {'jti': 'd86bd56f-916b-4ae4-93fc-055b9a403402', 'iss': 'https://dev.develop.tapis.io/v3/token', 'sub': 'testuser1@dev', 'tapis/tenant_id': 'dev', 'tapis/token_type': 'access', 'tapis/delegation': False, 'tapis/delegation_sub': None, 'tapis/username': 'testuser1', 'tapis/account_type': 'user', 'exp': 1587280571, 'tapis/client_id': None, 'tapis/grant_type': 'password'}
+expires_at: 2020-04-19 07:16:11+00:00
+expires_in: <function DynaTapy.set_access_token.<locals>._expires_in at 0x7f594da984d0>
+jti: d86bd56f-916b-4ae4-93fc-055b9a403402
+original_ttl: 14400
+```
+
+We see that the `access_token` object is a `TapisResult` object, and when we ask iPython to display it, we get the list
+of attributes on the object, in this case `access_token`, `claims`, `expires_at`, `expires_in`, `jti`, `original_ttl`. 
+Note that this is typical of all responses from Tapis APIs - assuming the response is a success, the Python SDK 
+automatically constructs a `TapisResult` object (or a `list` of `TapisResult` objects) from the
+`result` attribute from the response, and each attribute is accessible using the normal object attribute accessor dot
+notation; e.g., 
+```
+t.access_token.jti
+Out[*]: 'd86bd56f-916b-4ae4-93fc-055b9a403402'
+```  
+
+Note that we do not currently have a refresh token:
+```
+t.refresh_token
+
+```
+In order to get an access and refresh token, we also need an OAuth2 client. We do that using the
+`authenticator` service.
+
+List our clients:
+```
+t.authenticator.list_clients()
+
+[
+ callback_url: 
+ client_id: kGD7eWKE5wdad
+ client_key: Ze0YZPV88PAK5
+ create_time: Sun, 12 Apr 2020 20:27:54 GMT
+ description: 
+ display_name: 
+ last_update_time: Sun, 12 Apr 2020 20:27:54 GMT
+ owner: testuser1
+ tenant_id: dev]
+
+```
+
+We already have an OAuth client registered, but if we didn't we could register one using the 
+`t.authenticator.create_client()` method, which does not require any arguments (though you can optionally set the
+`client_id`, `client_key` and `callback_url` fields). To use a client, simply set the  `client_id` and
+`client_key` attributes on your tapis client:
+
+```
+t.client_id = 'kGD7eWKE5wdad'
+t.client_key = 'Ze0YZPV88PAK5'
+```
+
+Now when we call `get_tokens()`, the SDK will automatically use our client credentials and we will be given
+an access and refresh token:
+
+```
+t.get_tokens()
+t.access_token
+. . .
+jti: 778292c5-1c37-4588-aa13-0d02bf621a6b
+. . .
+
+t.refresh_token
+. . .
+jti: e68c0a0c-4825-4e86-9531-c7014d157572
+. . . 
+```
+
+## Service Account Type
+
+Tapis v3 introduces the notion of services and "service" account types. These represent the
+Tapis v3 API services themselves, such as the Tentants API, Systems APi, Files API, etc.
 
 Create a client for a service to the develop environment.
 
