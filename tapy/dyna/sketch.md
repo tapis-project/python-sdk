@@ -40,14 +40,14 @@ listing (GET endpoint) is available unauthenticated. The DynaTapy constructor re
 to resolve the `tenant_id` from the `base_url` passed to the constructor.
 
 In Tapis v3, you don't pass your password directly to each API; instead, you provide an access token. We use the 
-`testuser1` credentials to get an access token; technically this is part of the `oauth2` API, but we can use
+`testuser1` credentials to get an access token; technically this is part of the `authenticator` API, but we can use
 the `get_tokens()` convenience method:
 
 ```
 t.get_tokens() 
 ```
-At this point we have an access token, which returned to the `get_tokens()` method and stored on the
-Tapis client, `t`. We can inspect the access token by simply printing it out:
+At this point we have an access token, which was returned by the `get_tokens()` method and stored on the
+Tapis client, `t`. We can inspect the access token by simply displaying it:
 
 ```
 type(t.access_token)
@@ -224,22 +224,15 @@ Get a token, set the token, create a tenant:
 
 ```
 # Get a new token:
-tokens = t.tokens.create_token(token_type='service', token_tenant_id='dev', token_username='admin')
+tokens = t.tokens.create_token(account_type='service', token_tenant_id='master', token_username='tenants')
 Out[*]: <tapy.dyna.dynatapy.TapisResult at 0x7f699f7ae4e0>
 
 # In general, the result will have both the access and refresh tokens 
 tokens.access_token
-
-tenant = {'tenant_id': 'dev',
- 'base_url': 'https://dev.develop.tapis.io',
- 'description': 'The dev tenant in the develop instance.',
- 'token_service': 'https://dev.develop.tapis.io/v3/tokens',
- 'security_kernel': 'https://dev.develop.tapis.io/v3/security',
- 'is_owned_by_associate_site': True,
- 'owner': 'jstubbs@tacc.utexas.edu',
- 'authenticator': 'https://dev.develop.tapis.io/v3/oauth3',
- 'allowable_x_tenant_ids': ['dev']
- }
+access_token: eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJqdGkiOiIxZWRjYmJlOC1jYzg3LTQ3NzYtOGY0YS04YzUxNTc3OTgzYTgiLCJpc3MiOiJodHRwczovL21hc3Rlci5kZXZlbG9wLnRhcGlzLmlvL3YzL3Rva2VucyIsInN1YiI6InRlbmFudHNAbWFzdGVyIiwidGFwaXMvdGVuYW50X2lkIjoibWFzdGVyIiwidGFwaXMvdG9rZW5fdHlwZSI6ImFjY2VzcyIsInRhcGlzL2RlbGVnYXRpb24iOmZhbHNlLCJ0YXBpcy9kZWxlZ2F0aW9uX3N1YiI6bnVsbCwidGFwaXMvdXNlcm5hbWUiOiJ0ZW5hbnRzIiwidGFwaXMvYWNjb3VudF90eXBlIjoic2VydmljZSIsImV4cCI6MTU4NzI2ODI2MX0.n4jqD3HfszQ9VvoY_mu12YrBXeuS5OVm7wXjmUf3AUbBGKgzkQLJ_jlLj6_xsaXia992TzdfMbb30XzhEpVu5npXs5baMysM2RLc9PjWxx8jh-jTVCnm0X-HJUTLX3urO6qwtk6jQnNxiRbxlW-9Spav3924QvRjxLqPs3k8FZyzF8dOfNtbqw-Zg2Ju_ejjSY1nBPHcg91RSsykLDp83BrHGTse_Wd9AQGk9ZrtbN2jSEEZF4Uwwyw3dF_KKHV2U7vwVyhmnPyMQqtKi7F6BGFrLWGAXMLos-xmGp5JxnHq_yUewTT4jiiQYbspYBW-CyNJvQx9he8yInfN95HVDg
+expires_at: 2020-04-19T03:51:01.294662+00:00
+expires_in: 300
+jti: 1edcbbe8-cc87-4776-8f4a-8c51577983a8
  
  ```
 
