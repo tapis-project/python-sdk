@@ -77,7 +77,7 @@ Out[*]: 'd86bd56f-916b-4ae4-93fc-055b9a403402'
 Note that we do not currently have a refresh token:
 ```
 t.refresh_token
-
+Out[*]: 
 ```
 In order to get an access and refresh token, we also need an OAuth2 client. We do that using the
 `authenticator` service.
