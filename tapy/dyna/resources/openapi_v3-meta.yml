@@ -1,5 +1,5 @@
 openapi: 3.0.1
-# updated 4.22.2020
+# updated 4.23.2020
 info:
   title: "Tapis Meta V3 API"
   description: "The Tapis Meta API provides access to a MongoDB database. A standalone service which connects to a MongoDB database and immediately exposes all of MongoDB’s capabilities through a complete REST API, which allows the user to read and write JSON messages and binary data via HTTP."
@@ -287,8 +287,9 @@ paths:
         - name: keys
           in: query
           schema:
-            type: string
-            default: "{}"
+            type: array
+            items:
+              type: string
       responses:
         '200':
           description: List of collection names returned.
