@@ -531,13 +531,18 @@ class Operation(object):
                              data=data,
                              headers=headers).prepare()
 
-        # the create_token operation requires HTTP basic auth -
+        # the create_token operation requires HTTP basic auth, though some services, such as the authenticator, need to
+        # use create_token to generate tokens on behalf of other users; in these cases, it is important to not set the
+        # BasicAuth header, so we look for a special kwarg in this case
         if self.resource_name == 'tokens' and self.operation_id == 'create_token':
-            # contruct the requests HTTPBasicAuth header object
-            basic_auth_header = requests.auth.HTTPBasicAuth(self.tapis_client.username,
-                                                            self.tapis_client.service_password)
-            # set the object on the request
-            basic_auth_header(r)
+            # look for kwarg, use_basic_auth, to turn off use of BasicAuth; we default this to true so that BasicAuth
+            # is used if the argument is not passed.
+            if kwargs.get('use_basic_auth', True):
+                # contruct the requests HTTPBasicAuth header object
+                basic_auth_header = requests.auth.HTTPBasicAuth(self.tapis_client.username,
+                                                                self.tapis_client.service_password)
+                # set the object on the request
+                basic_auth_header(r)
 
         # make the request and return the response object -
         try:
