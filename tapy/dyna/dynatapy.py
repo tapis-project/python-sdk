@@ -484,6 +484,19 @@ class Operation(object):
 
         # set the X-Tapis-Token header using the client
         if self.tapis_client.get_access_jwt():
+            # check for a token about to expire in the next 5 seconds:
+            if datetime.timedelta(seconds=5) > self.tapis_client.access_token.expires_in():
+                # if the access token is about to expire, try to use refresh, unless this is a call to
+                # refresh (otherwise this would never terminate!)
+                if self.resource_name == 'tokens' and self.operation_id == 'refresh_token':
+                    pass
+                else:
+                    try:
+                        self.tapis_client.refresh_tokens()
+                    except:
+                        # for now, if we get an error trying to refresh the tokens,s, we ignore it and try the
+                        # request anyway.
+                        pass
             headers = {'X-Tapis-Token': self.tapis_client.get_access_jwt(), }
 
         # the X-Tapis-Tenant and X-Tapis-Username headers can be set when the token represents a service account and the
@@ -538,7 +551,7 @@ class Operation(object):
             # look for kwarg, use_basic_auth, to turn off use of BasicAuth; we default this to true so that BasicAuth
             # is used if the argument is not passed.
             if kwargs.get('use_basic_auth', True):
-                # contruct the requests HTTPBasicAuth header object
+                # construct the requests HTTPBasicAuth header object
                 basic_auth_header = requests.auth.HTTPBasicAuth(self.tapis_client.username,
                                                                 self.tapis_client.service_password)
                 # set the object on the request
