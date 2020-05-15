@@ -2244,7 +2244,6 @@ components:
           description: User defined Id for site.
         description:
           type: string
-          description: Site description.
         latitude:
           type: number
           description: Latitude of site.
