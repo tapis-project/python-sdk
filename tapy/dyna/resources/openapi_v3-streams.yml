@@ -1336,6 +1336,83 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+  /v3/streams/measurements/{inst_id}:
+    get:
+      tags:
+      - Measurements
+      summary: List measurements when only inst_id is provided
+      description: Download measurements
+      operationId: download_measurements.
+      parameters:
+        - name: inst_id
+          in: path
+          description: Unique id of instruments
+          required: true
+          schema:
+            type: string
+        - name: query
+          in: query
+          description: a formated query string for measurements.
+          schema:
+            type: string
+        - name: limit
+          in: query
+          description: limit the number of records returned.
+          schema:
+            type: integer
+        - name: offset
+          in: query
+          description: index (offset) to start list.
+          schema:
+            type: integer
+        - name: start_date
+          in: query
+          description: start date of measurements
+          schema:
+            type: string
+        - name: end_date
+          in: query
+          description: end date of measurements
+          schema:
+            type: string
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BasicResponse'
+                properties:
+                  result:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Measurement'
+
+        '400':
+          description: Input error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+
+
+
   /v3/streams/projects/{project_uuid}/sites/{site_id}/instruments/{inst_id}/measurements:
     get:
       tags:
@@ -2710,24 +2787,24 @@ components:
     Alert:
      type: object
      properties:
-      actor_id:
-        type: string
-        description: Abaco actor id
-      alert_id:
-        type: string
-        description: Alert id
-      channel_id:
-        type: string
-        description: Unique channel id
-      channel_name:
-        type: string
-        description: User defined channel name
-      create_time:
-        type: string
-        description: Time of alert creation
-      execution_id:
-        type: string
-        description: Abaco execution id
+       actor_id:
+         type: string
+         description: Abaco actor id
+       alert_id:
+         type: string
+         description: Alert id
+       channel_id:
+         type: string
+         description: Unique channel id
+       channel_name:
+          type: string
+          description: User defined channel name
+       create_time:
+          type: string
+          description: Time of alert creation
+       execution_id:
+          type: string
+          description: Abaco execution id
 
 
     Notification:
