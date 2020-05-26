@@ -52,7 +52,7 @@ def _getspec(resource_name, resource_url, download_spec=False):
     try:
         # for now, hardcode the paths; we could look these up based on a canonical URL once that is
         # established.
-        spec_path = f'/home/tapis/tapy/dyna/resources/openapi_v3-{resource_name}.yml'
+        spec_path = f'tapy/dyna/resources/openapi_v3-{resource_name}.yml'
         spec_dict = yaml.load(open(spec_path, 'r'))
         return create_spec(spec_dict)
     except Exception as e:
@@ -218,7 +218,7 @@ class DynaTapy(object):
     def get_service_tokens(self, **kwargs):
         """
         Calls the Tapis Tokens API (tokengen) to get access and refresh tokens for a service and set them on the client.
-        :return: 
+        :return:
         """
         if not 'username' in kwargs:
             username = self.username
@@ -367,15 +367,15 @@ class DynaTapy(object):
 
 class Resource(object):
     """
-    Represents a top-level API "resource" defined by an OpenAPI spec file. 
+    Represents a top-level API "resource" defined by an OpenAPI spec file.
     """
 
     def __init__(self, resource_name, resource_spec, tapis_client):
         """
-        Instantiate a resource. 
-        :param resource_name: (str) The name of the resource, such as "files", "apps", etc. 
-        :param resource_spec: (openapi_core.schema.specs.models.Spec) The Spec object associated with this resource. 
-        :param tapis_client: (tapy.Tapis) Pointer to the Tapis object to which this resource will be attached. 
+        Instantiate a resource.
+        :param resource_name: (str) The name of the resource, such as "files", "apps", etc.
+        :param resource_spec: (openapi_core.schema.specs.models.Spec) The Spec object associated with this resource.
+        :param tapis_client: (tapy.Tapis) Pointer to the Tapis object to which this resource will be attached.
         """
         # resource_name is something like "files", "apps", etc.
         self.resource_name = resource_name
@@ -405,16 +405,16 @@ class Resource(object):
 class Operation(object):
     """
     Represents a single operation on an API resource defined by an OpenAPI spec file.
-    Operation objects are in one-to-one correspondence with operation_id's defined in the spec file.     
+    Operation objects are in one-to-one correspondence with operation_id's defined in the spec file.
     """
 
     def __init__(self, resource_name, op_desc, tapis_client):
         """
-        Instantiate an operation. The op_desc should an openapi_core Operation object associated with the operation. 
+        Instantiate an operation. The op_desc should an openapi_core Operation object associated with the operation.
         :param resource_name: (str) The resource associated with this operation.
-        :param op_desc: (openapi_core.schema.operations.models.Operation) OpenAPI description of the operation. 
+        :param op_desc: (openapi_core.schema.operations.models.Operation) OpenAPI description of the operation.
         :param tapis_client: Pointer to the Tapis object to which this resource will be attached.
-        :return: 
+        :return:
         """
         self.resource_name = resource_name
         self.op_desc = op_desc
@@ -429,13 +429,13 @@ class Operation(object):
 
     def __call__(self, **kwargs):
         """
-        Turns the operation object into a callable. Arguments must be passed as kwargs, where the name of each kwarg 
+        Turns the operation object into a callable. Arguments must be passed as kwargs, where the name of each kwarg
         corresponds to a "parameter" in the OpenApi definition. Here, parameter could be a path parameter, body
-        parameter, or query parameter. 
-         
+        parameter, or query parameter.
+
         :param kwargs: All allowable arguments to this operation.
-         
-        :return: 
+
+        :return:
         """
         # the http method is defined by the operation -
         http_method = self.http_method.upper()
