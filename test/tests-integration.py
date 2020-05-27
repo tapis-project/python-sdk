@@ -253,7 +253,8 @@ def test_debug_flag_tenants(client):
 # Metadata tests -
 # ---------------------
 def test_create_coll(client):
-    result = client.meta.createCollection(db='testdb', collection='testcoll')
+    result,debug = client.meta.createCollection(db='testdb', collection='testcoll',_tapis_debug=True)
+    assert debug.response.status_code == 201
 
 def test_get_coll_names(client):
     result = client.meta.listCollectionNames(db='testdb')
@@ -261,13 +262,13 @@ def test_get_coll_names(client):
 
 #delete collection cannot be exercised as it needs additional header If-Match
 
-def test_create_doc(client):
-    result = client.meta.createDocument(db='testdb', collection='testcoll')
-    assert str(result)!= ''
+#def test_create_doc(client):
+ #   result = client.meta.createDocument(db='testdb', collection='testcoll')
+ #   assert str(result)!= ''
 
-def test_get_doc_(client):
-    result = client.meta.getDocument(db='testdb', collection='testcoll', docId='5e45b2cca93eebf39fbe1043')
-    assert 'testdoc' in str(result)
+#def test_get_doc_(client):
+ #   result = client.meta.getDocument(db='testdb', collection='testcoll', docId='5e45b2cca93eebf39fbe1043')
+ #   assert 'testdoc' in str(result)
 
 
 
