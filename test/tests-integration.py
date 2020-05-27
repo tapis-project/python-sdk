@@ -14,7 +14,12 @@ def client():
     username = getattr(conf, 'username', 'pysdk')
     account_type = getattr(conf, 'account_type', 'service')
     tenant_id = getattr(conf, 'tenant_id', 'master')
-    t = DynaTapy(base_url=base_url, username=username, account_type=account_type, tenant_id=tenant_id)
+    service_password = getattr(conf, 'service_password', None)
+    t = DynaTapy(base_url=base_url,
+                 username=username,
+                 account_type=account_type,
+                 tenant_id=tenant_id,
+                 service_password=service_password)
     t.get_tokens()
     return t
 
@@ -116,8 +121,8 @@ def test_client_has_tokens(client):
 
 
 def test_create_token(client):
-    toks = client.tokens.create_token(token_username='pysdk',
-                                      token_tenant_id='dev',
+    toks = client.tokens.create_token(token_username=conf.username,
+                                      token_tenant_id='master',
                                       account_type='service',
                                       access_token_ttl=14400,
                                       generate_refresh_token=True,
