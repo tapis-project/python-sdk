@@ -1945,11 +1945,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
-
-
-    post:
+    put:
       tags:
-      - Channel
+      - Channels
       summary: Update a channel
       description: Update a channel
       operationId: update_channel
@@ -2005,7 +2003,6 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
-
 
     delete:
       tags:
@@ -2269,6 +2266,50 @@ paths:
               schema:
                 $ref: '#/components/schemas/ErrorResponse'
 
+    put:
+      tags:
+        - Templates
+      summary: Update template.
+      description: Update template.
+      operationId: update_template
+      x-swagger-router-controller: connexContr
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateTemplate'
+      responses:
+        '201':
+          description: Updated
+          content:
+            application/json:
+              schema:
+                allOf:
+                  - $ref: '#/components/schemas/BasicResponse'
+                properties:
+                  result:
+                    $ref: '#/components/schemas/Template'
+        '400':
+          description: Input error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '401':
+          description: Not authorized.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+        '500':
+          description: Server error.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
 
 
   /units:
@@ -2804,6 +2845,10 @@ components:
         create_time:
           type: string
           description: The time of channel creation
+        status:
+          type: string
+          description: The status of channel
+          enum: [INACTIVE, ACTIVE]
         last_updated:
           type: string
           description: The time of channel update
