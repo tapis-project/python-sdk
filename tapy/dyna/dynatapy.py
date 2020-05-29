@@ -363,6 +363,140 @@ class DynaTapy(object):
             self.x_tenant_id = tenant_id
         self.base_url = base_url
 
+    def upload(self, source_file_path, system_id, dest_file_path, **kwargs):
+        """
+        Convenience method for uploading a file at a local path to a system
+        """
+        url = f'{self.base_url}/v3/files/ops/{system_id}/{dest_file_path}'
+        # check for the _tapis_debug flag for generating debug data
+        debug = False
+        if '_tapis_debug' in kwargs:
+            debug = kwargs.get('_tapis_debug', False)
+            # ignore non-boolean values for the debug flag and set it to False.
+            if not type(debug) == bool:
+                debug = False
+        # construct the http headers -
+        headers = {}
+        # set the X-Tapis-Token header using the client
+        if self.get_access_jwt():
+            # check for a token about to expire in the next 5 seconds:
+            if datetime.timedelta(seconds=5) > self.access_token.expires_in():
+                # if the access token is about to expire, try to use refresh, unless this is a call to
+                # refresh (otherwise this would never terminate!)
+                try:
+                    self.refresh_tokens()
+                except:
+                    # for now, if we get an error trying to refresh the tokens,s, we ignore it and try the
+                    # request anyway.
+                    pass
+            headers = {'X-Tapis-Token': self.get_access_jwt(), }
+
+        headers['Accept'] = 'application/json'
+        # the X-Tapis-Tenant and X-Tapis-Username headers can be set when the token represents a service account and the
+        # service is making a request on behalf of another user/tenant.
+        if self.x_tenant_id:
+            headers['X-Tapis-Tenant'] = self.x_tenant_id
+        if self.x_username:
+            headers['X-Tapis-User'] = self.x_username
+
+        # allow arbitrary headers to be passed in via the special "headers" kwarg -
+        try:
+            headers.update(kwargs.pop('headers', {}))
+        except ValueError:
+            raise tapy.errors.InvalidInputError(msg="The headers argument, if passed, must be a dictionary-like object.")
+
+        r = requests.Request('POST',
+                             url,
+                             files={"file": open(source_file_path, 'rb')},
+                             headers=headers).prepare()
+        # make the request and return the response object -
+        try:
+            resp = self.requests_session.send(r, verify=self.verify)
+        except Exception as e:
+            # todo - handle different types of requests exceptions
+            msg = f"Unable to make request to Tapis server. Exception: {e}"
+            raise tapy.errors.BaseTapyException(msg=msg, request=r)
+        # try to get the error message and version from the Tapis request:
+        try:
+            error_msg = resp.json().get('message')
+        except:
+            error_msg = resp.content
+        try:
+            version = resp.json().get('version')
+        except:
+            version = None
+        # for any kind of non-20x response, we need to raise an error.
+        if resp.status_code in (400, 404):
+            raise tapy.errors.InvalidInputError(msg=error_msg, version=version, request=r, response=resp)
+        if resp.status_code in (401, 403):
+            raise tapy.errors.NotAuthorizedError(msg=error_msg, version=version, request=r, response=resp)
+        if resp.status_code in (500, ):
+            raise tapy.errors.ServerDownError(msg=error_msg, version=version, request=r, response=resp)
+        # catch-all for any other non-20x response:
+        if resp.status_code >= 300:
+            raise tapy.errors.BaseTapyException(msg=error_msg, version=version, request=r, response=resp)
+
+        # generate the debug_data object
+        debug_data = Debug(request=r, response=resp)
+        # get the result's operation ids from the custom x-response-operation-ids for this operation id.from
+        # results_operation_ids = [...]
+        # resp.headers is a case-insensitive dict
+        resp_content_type = resp.headers.get('content-type')
+        if hasattr(resp_content_type, 'lower') and resp_content_type.lower() == 'application/json':
+            try:
+                json_content = resp.json()
+            except Exception as e:
+                msg = f'Requests could not produce JSON from the response even though the content-type was ' \
+                      f'application/json. Exception: {e}'
+                # TODO -- should this not be an error if the API has described the content-type as application/json?
+                #         what valid use cases do we still have for passing raw content in this case?
+                if debug:
+                    return resp.content, debug_data
+                return resp.content
+            # get the Tapis result object which could be a JSON object or list.
+            try:
+                result = json_content.get('result')
+            except Exception as e:
+                # some Tapis APIs, such as the Meta API, do not return "result" objects and/or do not return the
+                # standard Tapis stanzas but rather "raw" JSON documents
+                return resp.content
+            if result:
+                # if it is a list we should return a list of TapisResult objects:
+                if _seq_but_not_str(result):
+                    if len([item for item in result if type(item) in TapisResult.PRIMITIVE_TYPES]) > 0:
+                        if debug:
+                            return TapisResult(result), debug_data
+                        return TapisResult(result)
+                    else:
+                        if debug:
+                            return [TapisResult(**x) for x in result], debug_data
+                        return [TapisResult(**x) for x in result]
+                # otherwise, assume it is a JSON object and return that directly as a result -
+                try:
+                    if debug:
+                        return TapisResult(**result), debug_data
+                    return TapisResult(**result)
+                except TypeError:
+                    # result could be an honest string, in which case the use of **result will result in a type
+                    # error, which we catch and then return the result as is.
+                    if type(result) == str:
+                        return result
+                except Exception as e:
+                    msg = f'Failed to serialize the result object. Got exception: {e}'
+                    raise tapy.errors.InvalidServerResponseError(msg=msg, version=version, request=r, response=resp)
+            else:
+                # the response was JSON but not the standard Tapis 4 stanzas, so just return the JSON content:
+                if debug:
+                    return json_content, debug_data
+                return json_content
+
+        # todo - note:
+        # For now, we do not try to handle other content-types, such as application/xml, etc. We just return
+        # the raw content as the result.
+        if debug:
+            return resp.content, debug_data
+        return resp.content
+
 
 
 class Resource(object):
@@ -484,6 +618,19 @@ class Operation(object):
 
         # set the X-Tapis-Token header using the client
         if self.tapis_client.get_access_jwt():
+            # check for a token about to expire in the next 5 seconds:
+            if datetime.timedelta(seconds=5) > self.tapis_client.access_token.expires_in():
+                # if the access token is about to expire, try to use refresh, unless this is a call to
+                # refresh (otherwise this would never terminate!)
+                if self.resource_name == 'tokens' and self.operation_id == 'refresh_token':
+                    pass
+                else:
+                    try:
+                        self.tapis_client.refresh_tokens()
+                    except:
+                        # for now, if we get an error trying to refresh the tokens,s, we ignore it and try the
+                        # request anyway.
+                        pass
             headers = {'X-Tapis-Token': self.tapis_client.get_access_jwt(), }
 
         # the X-Tapis-Tenant and X-Tapis-Username headers can be set when the token represents a service account and the
@@ -510,7 +657,7 @@ class Operation(object):
                 data = {}
                 # if the request body has no defined properties, look for a single "request_body" parameter.
                 if self.op_desc.request_body.content['application/json'].schema.properties == {}:
-                    # choice of "data" is arbitrary, as the property name is not provided by the openapi spec in this case
+                    # choice of "request_body" is arbitrary, as the property name is not provided by the openapi spec in this case
                     data = kwargs['request_body']
                 else:
                     # otherwise, the request body has defined properties, so look for each one in the function kwargs
@@ -521,6 +668,9 @@ class Operation(object):
                             raise tapy.errors.InvalidInputError(msg=f'{p_name} is a required argument.')
                     # serialize data before passing it to the request
                 data = json.dumps(data)
+            if 'multipart/form-data' in self.op_desc.request_body.content.keys():
+                # todo - iterate over parts in self.op_desc.request_body.content['multipart/form-data'].schema.properties
+                raise NotImplementedError
         # todo - handle other body content types..
 
         # create a prepared request -
@@ -538,7 +688,7 @@ class Operation(object):
             # look for kwarg, use_basic_auth, to turn off use of BasicAuth; we default this to true so that BasicAuth
             # is used if the argument is not passed.
             if kwargs.get('use_basic_auth', True):
-                # contruct the requests HTTPBasicAuth header object
+                # construct the requests HTTPBasicAuth header object
                 basic_auth_header = requests.auth.HTTPBasicAuth(self.tapis_client.username,
                                                                 self.tapis_client.service_password)
                 # set the object on the request
@@ -611,6 +761,11 @@ class Operation(object):
                     if debug:
                         return TapisResult(**result), debug_data
                     return TapisResult(**result)
+                except TypeError:
+                    # result could be an honest string, in which case the use of **result will result in a type
+                    # error, which we catch and then return the result as is.
+                    if type(result) == str:
+                        return result
                 except Exception as e:
                     msg = f'Failed to serialize the result object. Got exception: {e}'
                     raise tapy.errors.InvalidServerResponseError(msg=msg, version=version, request=r, response=resp)
