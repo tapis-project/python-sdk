@@ -17,6 +17,11 @@
       "description": "The account type associated with the username.",
       "default": "service"
     },
+    "service_password": {
+      "type": "string",
+      "description": "The password to use when retrieving a token.",
+      "default": "pysdk"
+    },
     "base_url": {
       "type": "string",
       "description": "The base URL of the tenant to run the tests in.",

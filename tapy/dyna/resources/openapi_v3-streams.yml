@@ -1947,7 +1947,7 @@ paths:
 
 
 
-    patch:
+    post:
       tags:
       - Channel
       summary: Update a channel
@@ -1966,7 +1966,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/NewChannel'
+              $ref: '#/components/schemas/UpdateChannel'
       responses:
         '201':
           description: Updated
@@ -2919,6 +2919,15 @@ components:
         category:
           type: string
           description: category of unit.
+
+    UpdateChannel:
+      type: object
+      properties:
+        status:
+          type: string
+          description: Whether the request was a success or failure.
+          enum: [INACTIVE, ACTIVE]
+
 
     MeasuredProperty:
       type: object
