@@ -618,8 +618,16 @@ class Operation(object):
 
         # set the X-Tapis-Token header using the client
         if self.tapis_client.get_access_jwt():
-            # check for a token about to expire in the next 5 seconds:
-            if datetime.timedelta(seconds=5) > self.tapis_client.access_token.expires_in():
+            # check for a token about to expire in the next 5 seconds; assume by default we have a token with
+            # plenty of time remaining. 
+            time_remaining = datetime.timedelta(days=10)
+            try:
+                time_remaining = self.tapis_client.access_token.expires_in()
+            except:
+                # it is possible the access_token does not have an expires_in attribute and/or that it is not
+                # callable. we just pass on these exceptions and do not try to refresh the token.
+                pass
+            if datetime.timedelta(seconds=5) > time_remaining:
                 # if the access token is about to expire, try to use refresh, unless this is a call to
                 # refresh (otherwise this would never terminate!)
                 if self.resource_name == 'tokens' and self.operation_id == 'refresh_token':
