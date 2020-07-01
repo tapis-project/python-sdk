@@ -379,16 +379,27 @@ class DynaTapy(object):
         headers = {}
         # set the X-Tapis-Token header using the client
         if self.get_access_jwt():
-            # check for a token about to expire in the next 5 seconds:
-            if datetime.timedelta(seconds=5) > self.access_token.expires_in():
+            # check for a token about to expire in the next 5 seconds; assume by default we have a token with
+            # plenty of time remaining.
+            time_remaining = datetime.timedelta(days=10)
+            try:
+                time_remaining = self.tapis_client.access_token.expires_in()
+            except:
+                # it is possible the access_token does not have an expires_in attribute and/or that it is not
+                # callable. we just pass on these exceptions and do not try to refresh the token.
+                pass
+            if datetime.timedelta(seconds=5) > time_remaining:
                 # if the access token is about to expire, try to use refresh, unless this is a call to
                 # refresh (otherwise this would never terminate!)
-                try:
-                    self.refresh_tokens()
-                except:
-                    # for now, if we get an error trying to refresh the tokens,s, we ignore it and try the
-                    # request anyway.
+                if self.resource_name == 'tokens' and self.operation_id == 'refresh_token':
                     pass
+                else:
+                    try:
+                        self.tapis_client.refresh_tokens()
+                    except:
+                        # for now, if we get an error trying to refresh the tokens,s, we ignore it and try the
+                        # request anyway.
+                        pass
             headers = {'X-Tapis-Token': self.get_access_jwt(), }
 
         headers['Accept'] = 'application/json'
@@ -619,7 +630,7 @@ class Operation(object):
         # set the X-Tapis-Token header using the client
         if self.tapis_client.get_access_jwt():
             # check for a token about to expire in the next 5 seconds; assume by default we have a token with
-            # plenty of time remaining. 
+            # plenty of time remaining.
             time_remaining = datetime.timedelta(days=10)
             try:
                 time_remaining = self.tapis_client.access_token.expires_in()
