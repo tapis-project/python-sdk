@@ -1,3 +1,8 @@
+# ********* DEPRECATED *********** #
+
+# Use https://github.com/tapis-project/tapipy intead #
+
+
 # tapy - Tapis V3 Python SDK
 
 Python library for interacting with an instance of the Tapis API Framework.
